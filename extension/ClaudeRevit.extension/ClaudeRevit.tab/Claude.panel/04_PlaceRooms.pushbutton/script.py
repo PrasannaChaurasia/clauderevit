@@ -72,7 +72,7 @@ TRANSACTION:
 
 RULES:
   - Return ONLY executable Python. No markdown. No explanation.
-  - End with: forms.alert("Rooms placed", title="Done", warn_icon=False)
+  - End with: forms.alert("Rooms placed", title="Done")
 
 LEVELS: {lvl}
 """.format(lvl=json.dumps(level_info))
@@ -90,7 +90,7 @@ except Exception as e:
 output.print_code(code)
 
 go = forms.alert("Claude will place rooms. Fully undoable.",
-                 title="Place Rooms?", ok_btn="Place", cancel=True)
+                 title="Place Rooms?", cancel=True)
 if not go:
     script.exit()
 

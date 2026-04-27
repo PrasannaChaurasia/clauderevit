@@ -28,5 +28,4 @@ forms.alert(
     "pyRevit tab → pyRevit → Reload\n\n"
     "This unregisters all Idling handlers.",
     title="Claude Listener",
-    warn_icon=False
 )

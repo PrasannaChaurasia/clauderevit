@@ -72,7 +72,7 @@ TRANSACTION: wrap all changes:
 RULES:
   - Return ONLY executable Python. No markdown. No explanation.
   - Avoid duplicate walls — use distinct coordinates.
-  - End with: forms.alert("Model built", title="Done", warn_icon=False)
+  - End with: forms.alert("Model built", title="Done")
 
 AVAILABLE CONTEXT:
 Levels: {lvl}
@@ -93,7 +93,7 @@ output.print_code(code)
 
 go = forms.alert(
     "Claude will build geometry in your model.\nFully undoable with Ctrl+Z.",
-    title="Build Model?", ok_btn="Build", cancel=True
+    title="Build Model?", cancel=True
 )
 if not go:
     script.exit()

@@ -72,7 +72,7 @@ RULES:
   - Return ONLY executable Python code. No markdown fences. No explanation.
   - Do not import anything — everything is already in scope.
   - Handle exceptions with try/except and surface them via forms.alert().
-  - End every script with: forms.alert("Done: <summary>", title="Claude", warn_icon=False)
+  - End every script with: forms.alert("Done: <summary>", title="Claude")
 
 MODEL CONTEXT: """ + model_ctx
 
@@ -95,7 +95,6 @@ go = forms.alert(
     "Review the code above in the output window.\n\n"
     "Everything is undoable with Ctrl+Z.\n\nProceed?",
     title="Execute Claude Code?",
-    ok_btn="Run",
     cancel=True
 )
 if not go:

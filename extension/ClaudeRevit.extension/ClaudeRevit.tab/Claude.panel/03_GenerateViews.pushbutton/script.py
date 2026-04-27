@@ -76,7 +76,7 @@ TRANSACTION:
 
 RULES:
   - Return ONLY executable Python. No markdown. No explanation.
-  - End with: forms.alert("Views created", title="Done", warn_icon=False)
+  - End with: forms.alert("Views created", title="Done")
 
 LEVELS: {lvl}
 """.format(lvl=json.dumps(level_info))
@@ -94,7 +94,7 @@ except Exception as e:
 output.print_code(code)
 
 go = forms.alert("Claude will create views. Fully undoable.",
-                 title="Create Views?", ok_btn="Create", cancel=True)
+                 title="Create Views?", cancel=True)
 if not go:
     script.exit()
 

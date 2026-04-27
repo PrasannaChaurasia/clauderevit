@@ -100,7 +100,6 @@ try:
         "Commands from Claude will execute automatically.\n"
         "Results written to:\n{}".format(BRIDGE_CMD, BRIDGE_RESULT),
         title="Claude Listener Started",
-        warn_icon=False
     )
 except Exception as e:
     forms.alert("Failed to start listener:\n{}".format(str(e)), title="Error")

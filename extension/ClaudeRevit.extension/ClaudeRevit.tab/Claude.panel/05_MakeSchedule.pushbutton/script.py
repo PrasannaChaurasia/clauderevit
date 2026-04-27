@@ -72,7 +72,7 @@ TRANSACTION:
 RULES:
   - Return ONLY executable Python. No markdown. No explanation.
   - Wrap field lookup in try/except to skip unavailable fields.
-  - End with: forms.alert("Schedule created: " + sched.Name, title="Done", warn_icon=False)
+  - End with: forms.alert("Schedule created: " + sched.Name, title="Done")
 """
 
 output.print_md("# Make Schedule")
@@ -88,7 +88,7 @@ except Exception as e:
 output.print_code(code)
 
 go = forms.alert("Claude will create a schedule. Fully undoable.",
-                 title="Create Schedule?", ok_btn="Create", cancel=True)
+                 title="Create Schedule?", cancel=True)
 if not go:
     script.exit()
 

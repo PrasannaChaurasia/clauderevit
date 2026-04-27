@@ -73,7 +73,7 @@ RULES:
   - tb_id is already defined — use it directly.
   - Return ONLY executable Python. No markdown. No explanation.
   - Skip sheet numbers that already exist (wrap in try/except).
-  - End with: forms.alert("Sheets created", title="Done", warn_icon=False)
+  - End with: forms.alert("Sheets created", title="Done")
 
 EXISTING SHEETS: {ex}
 INSTRUCTION: {{instruction}}
@@ -94,7 +94,7 @@ except Exception as e:
 output.print_code(code)
 
 go = forms.alert("Claude will create sheets. Fully undoable.",
-                 title="Create Sheets?", ok_btn="Create", cancel=True)
+                 title="Create Sheets?", cancel=True)
 if not go:
     script.exit()
 
