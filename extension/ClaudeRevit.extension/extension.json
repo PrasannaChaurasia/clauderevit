@@ -1,0 +1,8 @@
+{
+  "name": "ClaudeRevit",
+  "description": "Full Claude AI integration for Autodesk Revit — Urban Matrix / Prasanna Chaurasia",
+  "author": "Prasanna Chaurasia",
+  "version": "1.0.0",
+  "min_revit_ver": 2023,
+  "max_revit_ver": 2026
+}

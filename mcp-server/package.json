@@ -1,0 +1,16 @@
+{
+  "name": "revit-claude-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for full Claude ↔ Revit API integration — Urban Matrix",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.0"
+  },
+  "author": "Prasanna Chaurasia — Urban Matrix",
+  "license": "MIT"
+}

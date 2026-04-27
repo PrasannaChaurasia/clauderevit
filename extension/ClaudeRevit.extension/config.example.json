@@ -1,0 +1,6 @@
+{
+  "anthropic_api_key": "YOUR_ANTHROPIC_API_KEY_HERE",
+  "model": "claude-sonnet-4-6",
+  "max_tokens": 4096,
+  "notes": "Copy this file to config.json and add your key from console.anthropic.com"
+}

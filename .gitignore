@@ -1,0 +1,7 @@
+node_modules/
+mcp-server/node_modules/
+*.env
+.env*
+
+# API key lives here — never commit the real config
+extension/ClaudeRevit.extension/config.json
