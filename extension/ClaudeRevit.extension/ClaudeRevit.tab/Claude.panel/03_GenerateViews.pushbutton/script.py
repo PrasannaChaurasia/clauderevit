@@ -91,7 +91,7 @@ except Exception as e:
     forms.alert("Claude API error:\n{}".format(e))
     script.exit()
 
-output.print_code(code, "python")
+output.print_code(code)
 
 go = forms.alert("Claude will create views. Fully undoable.",
                  title="Create Views?", ok_btn="Create", cancel=True)

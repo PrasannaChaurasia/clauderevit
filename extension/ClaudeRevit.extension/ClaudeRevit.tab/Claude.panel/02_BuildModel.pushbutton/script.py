@@ -89,7 +89,7 @@ except Exception as e:
     forms.alert("Claude API error:\n{}".format(e))
     script.exit()
 
-output.print_code(code, "python")
+output.print_code(code)
 
 go = forms.alert(
     "Claude will build geometry in your model.\nFully undoable with Ctrl+Z.",

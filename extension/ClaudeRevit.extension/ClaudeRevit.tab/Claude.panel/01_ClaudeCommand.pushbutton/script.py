@@ -88,7 +88,7 @@ except Exception as e:
     script.exit()
 
 output.print_md("**Generated code — review before running:**")
-output.print_code(code, "python")
+output.print_code(code)
 
 # ---- Confirm ----
 go = forms.alert(
