@@ -1,234 +1,203 @@
 <div align="center">
 
-# ClaudeRevit
+<img src="https://img.shields.io/badge/-%E2%96%A0%20CLAUDEREVIT-C8A96E?style=for-the-badge&logoColor=1a1a1a" height="36"/>
 
-### Control Autodesk Revit with plain English — powered by Claude AI
+# Control Revit with Plain English
 
-[![pyRevit](https://img.shields.io/badge/pyRevit-5.0+-orange?style=flat-square)](https://github.com/eirannejad/pyRevit)
-[![Revit](https://img.shields.io/badge/Revit-2023%2B-blue?style=flat-square)](https://www.autodesk.com/products/revit)
-[![Claude](https://img.shields.io/badge/Claude-Sonnet%204.6-purple?style=flat-square)](https://anthropic.com)
-[![Node](https://img.shields.io/badge/Node.js-18%2B-green?style=flat-square)](https://nodejs.org)
-[![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)](LICENSE)
+<p>
+<img src="https://img.shields.io/badge/Revit-2023%2B-0696D7?style=flat-square&logo=autodesk&logoColor=white"/>
+<img src="https://img.shields.io/badge/pyRevit-5.0%2B-FF6B35?style=flat-square"/>
+<img src="https://img.shields.io/badge/Claude-Sonnet%204.6-8B5CF6?style=flat-square"/>
+<img src="https://img.shields.io/badge/Node.js-18%2B-339933?style=flat-square&logo=nodedotjs&logoColor=white"/>
+<img src="https://img.shields.io/badge/IronPython-2.7-3776AB?style=flat-square&logo=python&logoColor=white"/>
+<img src="https://img.shields.io/badge/License-MIT-22C55E?style=flat-square"/>
+</p>
 
-**Type _"Create a 5-storey residential building with floor plans for each level"_ — Claude writes and executes the Revit API code live inside your model.**
+**ClaudeRevit** adds an AI tab to Autodesk Revit.<br/>
+Type _"Create a 5-storey residential building with floor plans for each level"_ — Claude writes and executes the Revit API code live inside your model.<br/>
+Every action is undoable with Ctrl+Z.
+
+<br/>
+
+```
+  You type:   "5 storeys at 4m spacing, rectangular 15×10m plan, 200mm walls"
+              ↓
+  Claude:     Writes IronPython code targeting the Revit API
+              ↓
+  pyRevit:    Executes inside Revit's ExternalEventHandler
+              ↓
+  Revit:      Levels, walls, floor geometry created in your model ✓
+```
 
 </div>
 
 ---
 
-## What Is This?
+## The ClaudeRevit Tab — 10 Buttons
 
-ClaudeRevit is a pyRevit extension + MCP server that connects Autodesk Revit to Claude (Anthropic's AI). Instead of writing Revit API scripts, you describe what you want in plain English — Claude generates the code and executes it directly inside Revit.
-
-Everything is undoable with **Ctrl+Z**. No scripting knowledge required.
-
----
-
-## The 10 Buttons
-
-| # | Button | What it does |
+| Button | What it does | Status |
 |---|---|---|
-| 1 | **Start Listener** | Arms Revit — begins watching for Claude commands |
-| 2 | **Stop Listener** | Disarms Revit — stops the bridge |
-| 3 | **Claude Command** | Large prompt box → Claude generates code → runs live |
-| 4 | **Build Model** | Describe a building → Claude creates levels, walls, floors, rooms |
-| 5 | **Generate Views** | Auto-create floor plans, sections, elevations, 3D views |
-| 6 | **Place Rooms** | Auto-place and name rooms from a description |
-| 7 | **Make Schedule** | Generate any schedule (walls, rooms, doors, custom) |
-| 8 | **Create Sheets** | Create drawing sheets with title blocks and placed views |
-| 9 | **Model Audit** | Claude reads the full model and produces a BIM audit report |
-| 10 | **Ask Claude** | Ask any Revit / BIM question with live model context |
+| ▶ **Start Listener** | Arms Revit — opens the file bridge for Claude Desktop | Ready |
+| ■ **Stop Listener** | Closes the bridge | Ready |
+| ✦ **Claude Command** | Chat-style prompt box → code generation → live execution | Ready |
+| ⬜ **Build Model** | Plain-English building description → walls, floors, levels | Ready |
+| ⊞ **Generate Views** | Auto-create floor plans, sections, elevations, 3D views | Ready |
+| ⊡ **Place Rooms** | Auto-place and name rooms from a text description | Ready |
+| ≡ **Make Schedule** | Any schedule in plain English — walls, rooms, doors, sheets | Ready |
+| ⬒ **Create Sheets** | Title blocks, sheet numbers, placed views, all automated | Ready |
+| ◎ **Model Audit** | Claude reads the full model and writes a structured BIM report | Ready |
+| ◌ **Ask Claude** | Ask any Revit or BIM question with your live model as context | Ready |
 
 ---
 
 ## How It Works
 
 ```mermaid
-flowchart TD
-    A["🗣️ You type a plain English instruction\nin the Claude Command prompt box"]
-    B["🤖 Claude generates\nRevit API Python code"]
-    C["📋 You review the code\nin the pyRevit output window"]
-    D{"Proceed?"}
-    E["⚡ Code executes live\ninside Revit via ExternalEventHandler"]
-    F["✅ Model updated\nUndo available via Ctrl+Z"]
-    G["❌ Cancelled — nothing changes"]
-
-    A --> B --> C --> D
-    D -- Yes --> E --> F
-    D -- No --> G
-```
-
----
-
-## Architecture
-
-```mermaid
 flowchart LR
-    subgraph Desktop["Your Desktop"]
-        CD["Claude Desktop App\nor Claude Command button"]
+    subgraph YOU["👤 You"]
+        A["Type plain English\nin Claude Command\nor Claude Desktop"]
     end
 
-    subgraph MCP["MCP Layer"]
-        MS["Node.js MCP Server\nmcp-server/src/index.js\n14 Revit tools"]
+    subgraph AI["🤖 Claude AI"]
+        B["Generates\nIronPython 2.7\nRevit API code"]
     end
 
-    subgraph Bridge["File Bridge\nC:/tools/revit-bridge/"]
-        CMD["command.json\n(Claude writes)"]
-        RES["result.json\n(Revit writes)"]
+    subgraph BRIDGE["📁 File Bridge\nC:/tools/revit-bridge/"]
+        C["command.json\n← Claude writes"]
+        D["result.json\n→ Revit writes"]
     end
 
-    subgraph Revit["Revit Process"]
-        IDLE["pyRevit Idling Event\npolls every tick"]
-        EE["ExternalEventHandler\nvalid API context"]
-        API["Revit API\nTransaction"]
-        MODEL["Revit Model\n.rvt file"]
+    subgraph REVIT["🏗️ Revit Process"]
+        E["Idling Event\npolls every 0.5s"]
+        F["ExternalEventHandler\nvalid API context"]
+        G["Transaction\nundoable Ctrl+Z"]
+        H["Your Model\n.rvt file"]
     end
 
-    CD -->|"MCP protocol"| MS
-    MS -->|"writes"| CMD
-    CMD -->|"detected"| IDLE
-    IDLE -->|"raises ExternalEvent"| EE
-    EE -->|"executes"| API
-    API -->|"modifies"| MODEL
-    MODEL -->|"result"| RES
-    RES -->|"polls"| MS
-    MS -->|"returns"| CD
+    A --> B --> C --> E --> F --> G --> H --> D --> A
 ```
 
-> **Why the file bridge?** Revit's API can only be called from inside specific event handlers within the Revit process. External threads — including any MCP server — are blocked from direct API calls. The file bridge + ExternalEvent pattern is the officially-supported architecture for this.
+> **Why the file bridge?**  
+> The Revit API is single-threaded. It can only be called from inside Revit's own event loop — never from external processes. The file bridge + `ExternalEvent` is the officially documented pattern for this.
 
 ---
 
-## Requirements
+## System Requirements
 
-Before you start, make sure these are installed:
-
-| Software | Version | Download |
+| Software | Minimum Version | Where to get it |
 |---|---|---|
-| Autodesk Revit | 2023 or later | Your Autodesk subscription |
-| pyRevit | 5.0+ | [github.com/eirannejad/pyRevit](https://github.com/eirannejad/pyRevit/releases) |
-| Node.js | 18+ | [nodejs.org](https://nodejs.org) |
+| Autodesk Revit | 2023 | Your Autodesk subscription |
+| pyRevit | 5.0 | [github.com/eirannejad/pyRevit/releases](https://github.com/eirannejad/pyRevit/releases) |
+| Node.js | 18 LTS | [nodejs.org](https://nodejs.org) |
 | Claude Desktop | Latest | [claude.ai/download](https://claude.ai/download) |
+| Anthropic API key | — | [console.anthropic.com](https://console.anthropic.com) → API Keys |
 
-You also need an **Anthropic API key** — get one free at [console.anthropic.com](https://console.anthropic.com).
+**Cost:** Roughly £0.01–0.05 per command depending on complexity. No subscription required beyond the API.
 
 ---
 
-## Installation — Step by Step
+## Installation
 
-### ① Clone the repository
-
-Open a terminal and run:
+### Step ① — Get the files
 
 ```bash
 git clone https://github.com/PrasannaChaurasia/revit-connections-with-claude.git
-cd revit-connections-with-claude
 ```
 
-Or download the ZIP from the green **Code** button above and extract it.
+Or click the green **Code → Download ZIP** button above and extract anywhere.
 
 ---
 
-### ② Copy the pyRevit extension
+### Step ② — Copy the pyRevit extension
 
-Copy the extension folder to pyRevit's Extensions directory:
-
-```
-FROM:  revit-connections-with-claude/
-          └── extension/
-                └── ClaudeRevit.extension/   ← copy this whole folder
-
-TO:    C:\Users\<YourName>\AppData\Roaming\pyRevit\Extensions\
-```
-
-**Tip:** In Windows Explorer, paste this in the address bar to open the destination:
+Open Windows Explorer and paste this into the address bar:
 ```
 %APPDATA%\pyRevit\Extensions
 ```
 
-After copying, the path should look like:
+Copy the entire `ClaudeRevit.extension` folder from the repo into that directory:
+
+```
+Copy:  revit-connections-with-claude\extension\ClaudeRevit.extension\
+
+Into:  C:\Users\<YourName>\AppData\Roaming\pyRevit\Extensions\
+```
+
+The result should be:
 ```
 C:\Users\<YourName>\AppData\Roaming\pyRevit\Extensions\
     └── ClaudeRevit.extension\
             ├── lib\
-            ├── config.json          ← you will create this in Step ③
+            ├── config.example.json
             └── ClaudeRevit.tab\
-                    └── Claude.panel\
-                            └── 01_ClaudeCommand.pushbutton\
-                            └── ...
 ```
 
 ---
 
-### ③ Add your Anthropic API key
+### Step ③ — Add your API key
 
-In the extension folder, find `config.example.json`:
+Inside the extension folder, find `config.example.json`. Copy it and rename to `config.json`:
 
 ```
-ClaudeRevit.extension\config.example.json
+config.example.json  →  config.json
 ```
 
-Copy it and rename the copy to `config.json`:
-
-```bash
-# Windows
-copy "ClaudeRevit.extension\config.example.json" "ClaudeRevit.extension\config.json"
-```
-
-Open `config.json` in any text editor and paste your API key:
+Open `config.json` in Notepad and paste your Anthropic API key:
 
 ```json
 {
   "anthropic_api_key": "sk-ant-api03-YOUR-KEY-HERE",
   "model": "claude-sonnet-4-6",
-  "max_tokens": 1500,
-  "notes": "NEVER commit this file. It is in .gitignore."
+  "max_tokens": 1500
 }
 ```
 
-> **Where do I get the API key?**
-> 1. Go to [console.anthropic.com](https://console.anthropic.com)
-> 2. Sign in → API Keys → Create Key
-> 3. Copy the key (starts with `sk-ant-api03-`)
-> 4. Paste it into `config.json`
-
-> **Important:** Each person who uses this needs their own API key. Never share your key.
+> **Get your key:**  
+> 1. Sign in at [console.anthropic.com](https://console.anthropic.com)  
+> 2. Go to **API Keys** → **Create Key**  
+> 3. Copy the key (starts with `sk-ant-api03-`)  
+> 
+> **Never commit `config.json` to GitHub. It is already listed in `.gitignore`.**
 
 ---
 
-### ④ Create the bridge directory
+### Step ④ — Create the bridge folder
 
-The file bridge needs a folder to exchange commands between Claude and Revit.
-
-```bash
-# Windows Command Prompt or PowerShell
-mkdir C:\tools\revit-bridge
+```
+Create this folder:   C:\tools\revit-bridge\
 ```
 
-Or create it manually in Windows Explorer at `C:\tools\revit-bridge`.
+In Windows Explorer: navigate to `C:\tools\`, right-click → New Folder → name it `revit-bridge`.
+
+Or in PowerShell:
+```powershell
+New-Item -ItemType Directory -Path "C:\tools\revit-bridge"
+```
 
 ---
 
-### ⑤ Install MCP server dependencies
+### Step ⑤ — Install MCP server
+
+Open a terminal in the repo folder and run:
 
 ```bash
-cd revit-connections-with-claude/mcp-server
+cd revit-connections-with-claude\mcp-server
 npm install
 ```
 
-This installs the MCP SDK that Claude Desktop uses to communicate with the server. It takes about 10 seconds.
+This takes about 10 seconds and installs the MCP SDK.
 
 ---
 
-### ⑥ Configure Claude Desktop
+### Step ⑥ — Connect Claude Desktop
 
-Open this file in a text editor (create it if it doesn't exist):
+Open this file in Notepad (create it if it doesn't exist):
 
 ```
 C:\Users\<YourName>\AppData\Roaming\Claude\claude_desktop_config.json
 ```
 
-Paste this content, replacing `<YourName>` and the path with where you cloned the repo:
+Add the MCP server entry. Replace `<FULL-PATH>` with the actual path to `index.js`:
 
 ```json
 {
@@ -245,137 +214,163 @@ Paste this content, replacing `<YourName>` and the path with where you cloned th
 }
 ```
 
-> **Tip:** Use forward slashes in `args` but double backslashes in `env` for `BRIDGE_DIR`.
-
 ---
 
-### ⑦ Reload pyRevit and activate the listener
+### Step ⑦ — Load the extension in Revit
 
-1. Open Revit with any project file
-2. Go to the **pyRevit** tab in the Revit ribbon
+1. Open Revit
+2. Go to the **pyRevit** ribbon tab
 3. Click **Reload** (top-left of the pyRevit tab)
-4. The **ClaudeRevit** tab will appear in the ribbon
-5. Click **Start Listener** — a confirmation alert will appear
-6. Revit is now ready
+4. The **ClaudeRevit** tab appears in the ribbon
 
 ---
 
-### ⑧ Restart Claude Desktop
+### Step ⑧ — Start the listener and connect Claude Desktop
 
-Close Claude Desktop completely and reopen it. It will load the MCP server on startup.
+**In Revit:**
+1. Click **Start Listener** in the ClaudeRevit tab
+2. A confirmation dialog appears — Revit is now ready
 
-To verify the connection:
-- Open Claude Desktop
-- Click the **hammer icon** (🔨) next to the message box
-- You should see **revit-file-bridge** listed with 14 tools
-
----
-
-### ✅ You are ready
-
-Click **Claude Command** in the ClaudeRevit tab, type your instruction, and press **Run with Claude**.
+**In Claude Desktop:**
+1. Fully close Claude Desktop (right-click system tray icon → Quit)
+2. Reopen Claude Desktop
+3. Click the **🔨 hammer icon** next to the message input
+4. You should see **revit-file-bridge** with 14 tools listed
 
 ---
 
-## Verification — Check Claude Desktop Is Connected
+### ✅ Ready — test it
 
-```mermaid
-flowchart LR
-    A["Open Claude Desktop"] --> B["Click 🔨 hammer icon\nnext to message input"]
-    B --> C{"revit-file-bridge\nappears?"}
-    C -- Yes --> D["✅ Connected\nStart using it"]
-    C -- No --> E["Check claude_desktop_config.json\nRestart Claude Desktop"]
+Click **Claude Command** in the ClaudeRevit tab and type:
+
+```
+Create 3 levels named Ground Floor, First Floor, Second Floor at 0m, 4m, 8m
 ```
 
-In Claude Desktop, the hammer icon shows all active MCP tools. You should see tools like `revit_get_model_info`, `revit_create_levels`, etc. If you see them, everything is connected.
+Claude will generate the code, show it for review, and execute it in your model.
 
 ---
 
-## Usage Examples
+## Using Claude Desktop to Control Revit
 
-### Claude Command button (in Revit)
+Once the Listener is running, open Claude Desktop and type directly:
 
-Type these in the **Claude Command** prompt box:
+| What you type | What happens in Revit |
+|---|---|
+| `What does my model have?` | Returns counts, levels, sheets |
+| `Create 5 levels at 4m spacing` | Levels appear in model |
+| `List all rooms and their areas` | Returns table of rooms |
+| `Create a wall schedule with Type, Length, Area` | Schedule created in project |
+| `Delete all views that start with "Copy"` | Views removed (use carefully) |
+
+---
+
+## Example Prompts for Claude Command
 
 ```
-Create 5 storeys at 4m spacing starting at 0m
+Create 5 storeys at 4m spacing starting at 0m elevation
 ```
 
 ```
-Build a 12m x 8m rectangular floor plan on Level 1
-with 200mm concrete walls and a 150mm concrete floor
+Build a 15m × 10m rectangular floor plan on Level 1
+with 200mm brick walls and a 150mm concrete floor slab
 ```
 
 ```
 Create sheets A101 through A115 with A1 title block.
 Place one floor plan view per level on each sheet.
+Number them sequentially.
 ```
 
 ```
-Rename all rooms on Level 0 with prefix GF-
-and all rooms on Level 1 with prefix L1-
+Rename all rooms on Level 0 with prefix "GF-" and
+all rooms on Level 1 with prefix "L1-"
 ```
 
 ```
-Create a room schedule showing:
-Name, Number, Area (m²), Level, Department
+5-storey residential block:
+- Ground floor: lobby 8×6m, 2 core lifts, bin store, cycle store
+- Floors 1–4: 4 apartments per floor (2-bed 65m², 1-bed 45m²)
+- Roof: plant room 6×4m + communal terrace
+Add floor plan views for all levels and create a sheet for each.
 ```
 
 ```
-5-storey residential building:
-- Ground floor: lobby 8x6m, 2 lifts, bin store
-- Floors 1-4: 4 apartments each (2-bed 65sqm, 1-bed 45sqm)
-- Roof: plant room + terrace
-Add floor plan views for each level.
+Create a room schedule with Name, Number, Area (m²), Level, and Department.
+Sort by Level then by Room Number.
+Group by Level.
 ```
 
-### Claude Desktop (via MCP — no button click needed)
+---
 
-Once the Listener is running in Revit, type directly in Claude chat:
+## How Claude Generates Safe Revit Code
 
-```
-What does my Revit model currently have?
-```
-```
-Create 3 levels at 3m, 6m, 9m
-```
-```
-List all rooms and their floor areas
-```
+Every generated script follows strict rules enforced in the system prompt:
+
+| Rule | Why |
+|---|---|
+| No f-strings, use `.format()` | pyRevit runs IronPython 2.7 (Python 2) |
+| All changes in `with revit.Transaction()` | Makes every action undoable with Ctrl+Z |
+| Distances always converted to decimal feet | Revit internal unit is feet, not metres |
+| `try/except` wrapping all operations | Errors surface as Revit alerts, not silent crashes |
+| No `ok_btn` or `warn_icon` in `forms.alert()` | Not supported in this pyRevit version |
 
 ---
 
 ## Troubleshooting
 
-| Problem | Likely Cause | Fix |
+| Symptom | Cause | Fix |
 |---|---|---|
 | ClaudeRevit tab missing | pyRevit not reloaded | pyRevit tab → Reload |
-| "Claude API error" | Wrong or missing API key | Check `config.json` — key must start with `sk-ant-` |
-| "Timeout waiting for Revit" | Listener not running | Click **Start Listener** first |
-| Prompt box opens but typing doesn't work | Focus issue | Click inside the text box once, then type |
-| Code runs but model unchanged | Python error in generated code | Check pyRevit output window for error details |
-| MCP not connected in Claude Desktop | Config not saved or wrong path | Edit `claude_desktop_config.json`, restart Claude Desktop |
-| `revit-file-bridge` not in hammer menu | Claude Desktop not restarted | Fully close and reopen Claude Desktop |
+| "Cannot convert 1 to WindowStartupLocation" | Old script version | Pull latest from GitHub, reload pyRevit |
+| "Claude API error: 401" | Wrong API key | Check `config.json` — key must start with `sk-ant-api03-` |
+| Timeout waiting for Revit | Listener not running | Click **Start Listener** before sending commands |
+| Revit laggy after Start Listener | Old version polled every frame | Latest version polls at 2×/sec — pull and reload |
+| "categoryId is not valid for schedule" | OST_Sheets with CreateSchedule | Fixed in latest version — pull and reload |
+| 🔨 hammer missing in Claude Desktop | Claude Desktop not restarted | Fully quit (system tray) and reopen |
+| Hammer shows but revit-file-bridge missing | Config path wrong | Check `claude_desktop_config.json`, use forward slashes in `args` |
+| Code runs but nothing changes | Missing bridge folder | Ensure `C:\tools\revit-bridge\` exists |
 
 ---
 
-## Sharing This With Another Person
+## What Else Can Be Added
 
-Anyone can install and use this. Each person needs:
+**Planned features:**
 
-1. Clone or download this repository
-2. Copy `ClaudeRevit.extension` to their `%APPDATA%\pyRevit\Extensions\`
-3. Create `config.json` with **their own Anthropic API key**
-4. Create `C:\tools\revit-bridge\`
-5. Run `npm install` in the `mcp-server` folder
-6. Add the server to their `claude_desktop_config.json`
-7. Reload pyRevit → click Start Listener → restart Claude Desktop
-
-The only cost is the Anthropic API usage — roughly $0.01–0.05 per command depending on complexity.
+| Feature | Description |
+|---|---|
+| **Architectural Audit** | Checks drawing conventions, room naming, wall types, sheet organisation against UK/global standards |
+| **MEP Coordination Audit** | Flags spatial clashes, missing system connections, duct/pipe sizing |
+| **Structural Audit** | Column grid consistency, beam sizing, structural level alignment |
+| **NBS Specification Linker** | Links wall types and materials to NBS clauses |
+| **IFC Export Checker** | Validates model against IFC4 LOD requirements before export |
+| **COBie Readiness Report** | Checks which parameters are missing for COBie handover |
+| **Drawing Issue Manager** | Creates revision clouds, updates revision tables, manages drawing status |
+| **Clash Detection Summary** | Runs basic spatial checks and reports conflicts |
+| **Parameter Bulk Editor** | Edit parameters across hundreds of elements at once using plain English |
+| **Phasing Manager** | Assign elements to phases from a description |
 
 ---
 
-## File Structure
+## For Public / New Users — How to Install on Your System
+
+Anyone can install this. You do not need programming experience. You need:
+
+1. **Revit 2023+** with an active Autodesk licence
+2. **pyRevit** (free) — install from [github.com/eirannejad/pyRevit/releases](https://github.com/eirannejad/pyRevit/releases)
+3. **Node.js 18+** (free) — install from [nodejs.org](https://nodejs.org)
+4. **Claude Desktop** (free app) — from [claude.ai/download](https://claude.ai/download)
+5. **Anthropic API key** — [console.anthropic.com](https://console.anthropic.com) → sign up → API Keys → Create
+
+Then follow Steps ① through ⑧ above. Each step has a clear terminal command or folder path.
+
+**What it costs:** Only the Anthropic API usage — roughly 1–5p per command. No monthly fee.
+
+**What it does NOT require:** Python knowledge, Revit API knowledge, scripting experience.
+
+---
+
+## Repository Structure
 
 ```
 revit-connections-with-claude/
@@ -383,48 +378,30 @@ revit-connections-with-claude/
 ├── extension/
 │   └── ClaudeRevit.extension/
 │       ├── lib/
-│       │   ├── claude_client.py          ← Claude API caller (shared by all buttons)
-│       │   └── command_dispatcher.py     ← 14 Revit API action handlers
-│       ├── config.example.json           ← Template — copy to config.json, add key
-│       ├── config.json                   ← YOUR KEY — gitignored, never committed
+│       │   ├── claude_client.py        ← Calls Claude API, executes code
+│       │   └── command_dispatcher.py   ← 14 Revit actions (read + write)
+│       ├── config.example.json         ← Copy this → config.json, add key
 │       └── ClaudeRevit.tab/
 │           └── Claude.panel/
-│               ├── 00_StartListener.pushbutton/    ← icon.png + script.py
+│               ├── 00_StartListener.pushbutton/
 │               ├── 00_StopListener.pushbutton/
-│               ├── 01_ClaudeCommand.pushbutton/    ← WPF prompt + code gen + exec
+│               ├── 01_ClaudeCommand.pushbutton/   ← Chat-style prompt + exec
 │               ├── 02_BuildModel.pushbutton/
 │               ├── 03_GenerateViews.pushbutton/
 │               ├── 04_PlaceRooms.pushbutton/
-│               ├── 05_MakeSchedule.pushbutton/
+│               ├── 05_MakeSchedule.pushbutton/    ← Fixed OST_Sheets bug
 │               ├── 06_CreateSheets.pushbutton/
 │               ├── 07_ModelAudit.pushbutton/
 │               └── 08_AskClaude.pushbutton/
 │
 ├── mcp-server/
 │   ├── src/
-│   │   └── index.js                      ← Node.js MCP server, 14 Revit tools
-│   ├── package.json
-│   └── package-lock.json
+│   │   └── index.js                   ← Node.js MCP server, 14 tools
+│   └── package.json
 │
-├── .gitignore                            ← config.json excluded
+├── .gitignore                         ← config.json excluded
 └── README.md
 ```
-
----
-
-## Technical Notes
-
-### IronPython 2.7
-pyRevit scripts run in IronPython 2.7 (Python 2 syntax). All generated code uses `.format()` instead of f-strings, and all Revit API patterns are Python 2 compatible.
-
-### Revit API Threading
-The Revit API cannot be called from external threads. This is why the file bridge + ExternalEvent pattern is used — commands are queued and executed inside Revit's own event loop via the `Idling` event handler.
-
-### Revit Units
-All Revit API distances are in **decimal feet**. The scripts convert automatically: `1 metre = 3.28084 ft`, `1 mm = 1/304.8 ft`. You can always type in metres — Claude handles the conversion.
-
-### Undo
-Every model modification is wrapped in a `Transaction`, which means every action is fully undoable with **Ctrl+Z** in Revit.
 
 ---
 
@@ -439,6 +416,6 @@ Urban Matrix — Manchester, UK
 
 <div align="center">
 
-*Built to make BIM faster — not just smarter.*
+*Revit speaks English now.*
 
 </div>
