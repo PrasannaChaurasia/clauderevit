@@ -2,9 +2,7 @@
 __title__ = "Claude\nCommand"
 __doc__ = "Type any instruction. Claude writes and executes the Revit API code live."
 
-import sys
-import os
-import clr
+import sys, os, clr, time
 
 _lib = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "lib")
 sys.path.insert(0, os.path.normpath(_lib))
@@ -13,237 +11,298 @@ clr.AddReference("PresentationFramework")
 clr.AddReference("PresentationCore")
 clr.AddReference("WindowsBase")
 
-from System.Windows import Window, Thickness, GridLength, GridUnitType
-from System.Windows.Controls import (Grid, RowDefinition, StackPanel, TextBlock,
-                                      TextBox, Button, Orientation,
-                                      ScrollBarVisibility)
-from System.Windows.Input import Keyboard
-from System.Windows.Media import SolidColorBrush, Color
-from System.Windows import FontWeights, HorizontalAlignment, VerticalAlignment
+from System.Windows import (Window, Thickness, GridLength, GridUnitType,
+                             WindowStartupLocation, ResizeMode,
+                             TextWrapping, HorizontalAlignment, VerticalAlignment,
+                             FontWeights)
+from System.Windows.Controls import (Grid, RowDefinition, ColumnDefinition,
+                                      StackPanel, TextBlock, TextBox, Button,
+                                      ScrollBarVisibility, Orientation, Border,
+                                      CornerRadius)
+from System.Windows.Input import Keyboard, Key, ModifierKeys
+from System.Windows.Media import SolidColorBrush, Color, LinearGradientBrush, GradientStop
 
 from pyrevit import revit, DB, forms, script
 from Autodesk.Revit.DB import FilteredElementCollector, Wall, Floor, ViewSheet, Level
 from claude_client import ask_claude, strip_fences, exec_claude_code, revit_exec_context
 
-doc   = revit.doc
-uidoc = revit.uidoc
+doc    = revit.doc
+uidoc  = revit.uidoc
 output = script.get_output()
 
-# ---- Model context ----
+# ── Model context ────────────────────────────────────────────
 try:
     walls  = FilteredElementCollector(doc).OfClass(Wall).GetElementCount()
     floors = FilteredElementCollector(doc).OfClass(Floor).GetElementCount()
     sheets = FilteredElementCollector(doc).OfClass(ViewSheet).GetElementCount()
     levels = list(FilteredElementCollector(doc).OfClass(Level).ToElements())
     level_names = ", ".join(l.Name for l in levels)
-    model_ctx = "Model: {} | Walls:{} Floors:{} Sheets:{} Levels:[{}]".format(
+    model_ctx = "{}  |  Walls: {}   Floors: {}   Sheets: {}   Levels: [{}]".format(
         doc.Title, walls, floors, sheets, level_names)
 except Exception as e:
-    model_ctx = "Model: {} (context error: {})".format(doc.Title, e)
+    model_ctx = "{} (context error: {})".format(doc.Title, e)
 
 
-def _brush(r, g, b):
-    return SolidColorBrush(Color.FromRgb(r, g, b))
+def _c(r, g, b, a=255):
+    return SolidColorBrush(Color.FromArgb(a, r, g, b))
 
 
-def show_prompt_dialog(model_ctx_text):
-    """Large WPF prompt window. Returns instruction string or None."""
+def show_chat_dialog(model_ctx_text):
+    """Chat-style WPF prompt window. Returns instruction string or None."""
     result = [None]
-    tb_ref = [None]
 
     win = Window()
     win.Title = "Claude Command"
-    win.Width = 740
-    win.Height = 560
-    win.MinWidth = 520
-    win.MinHeight = 400
-    win.WindowStartupLocation = 1   # CenterScreen
-    win.ResizeMode = 1              # CanResizeWithGrip
-    win.Background = _brush(24, 24, 24)
+    win.Width  = 780
+    win.Height = 620
+    win.MinWidth  = 560
+    win.MinHeight = 440
+    win.WindowStartupLocation = WindowStartupLocation.CenterScreen
+    win.ResizeMode  = ResizeMode.CanResizeWithGrip
+    win.Background  = _c(18, 18, 22)
+    win.BorderBrush = _c(50, 50, 65)
+    win.BorderThickness = Thickness(1)
 
-    # --- Root Grid: 5 rows ---
-    root = Grid()
-    root.Margin = Thickness(20)
-
-    def add_row(height_val, unit=GridUnitType.Pixel):
+    # ── Outer grid: titlebar / body / input bar ──────────────
+    outer = Grid()
+    for h in [44, 1, 1, 52]:   # title, divider, body(star), input
         rd = RowDefinition()
-        rd.Height = GridLength(height_val, unit)
-        root.RowDefinitions.Add(rd)
+        rd.Height = GridLength(h, GridUnitType.Pixel if h != 1 else GridUnitType.Pixel)
+        outer.RowDefinitions.Add(rd)
+    # fix: star row
+    outer.RowDefinitions.Clear()
 
-    add_row(32)          # row 0 — header
-    add_row(20)          # row 1 — context line
-    add_row(16)          # row 2 — label
-    add_row(1, GridUnitType.Star)  # row 3 — text box (stretches)
-    add_row(50)          # row 4 — examples + buttons
+    def add_row(val, star=False):
+        rd = RowDefinition()
+        rd.Height = GridLength(val, GridUnitType.Star if star else GridUnitType.Pixel)
+        outer.RowDefinitions.Add(rd)
 
-    def place(ctrl, row, col=0, colspan=1):
-        Grid.SetRow(ctrl, row)
-        Grid.SetColumn(ctrl, col)
-        if colspan > 1:
-            Grid.SetColumnSpan(ctrl, colspan)
-        root.Children.Add(ctrl)
+    add_row(48)       # 0 titlebar
+    add_row(1)        # 1 divider
+    add_row(1, True)  # 2 body (stretches)
+    add_row(1)        # 3 divider2
+    add_row(130)      # 4 input area
 
-    # Header
-    header = TextBlock()
-    header.Text = "Claude Command  —  {}".format(doc.Title)
-    header.Foreground = _brush(200, 169, 110)
-    header.FontSize = 15
-    header.FontWeight = FontWeights.Bold
-    header.VerticalAlignment = VerticalAlignment.Center
-    place(header, 0)
+    # ── Titlebar ─────────────────────────────────────────────
+    title_bg = Border()
+    title_bg.Background = _c(24, 24, 32)
+    title_row = Grid()
 
-    # Context
-    ctx_block = TextBlock()
-    ctx_block.Text = model_ctx_text
-    ctx_block.Foreground = _brush(130, 130, 130)
-    ctx_block.FontSize = 11
-    ctx_block.TextWrapping = 3
-    ctx_block.VerticalAlignment = VerticalAlignment.Center
-    place(ctx_block, 1)
+    dot_row = StackPanel()
+    dot_row.Orientation = Orientation.Horizontal
+    dot_row.VerticalAlignment = VerticalAlignment.Center
+    dot_row.Margin = Thickness(16, 0, 0, 0)
+    for col in [(220, 80, 80), (240, 180, 60), (80, 200, 100)]:
+        d = Border()
+        d.Width  = 10
+        d.Height = 10
+        d.CornerRadius = CornerRadius(5)
+        d.Background = _c(*col)
+        d.Margin = Thickness(0, 0, 6, 0)
+        dot_row.Children.Add(d)
+    title_row.Children.Add(dot_row)
 
-    # Label
-    lbl = TextBlock()
-    lbl.Text = "Instruction  (Ctrl+Enter to run)"
-    lbl.Foreground = _brush(180, 180, 180)
-    lbl.FontSize = 11
-    lbl.VerticalAlignment = VerticalAlignment.Bottom
-    lbl.Margin = Thickness(0, 0, 0, 2)
-    place(lbl, 2)
+    title_lbl = TextBlock()
+    title_lbl.Text = "Claude Command  —  " + doc.Title
+    title_lbl.Foreground = _c(200, 169, 110)
+    title_lbl.FontSize   = 13
+    title_lbl.FontWeight = FontWeights.SemiBold
+    title_lbl.HorizontalAlignment = HorizontalAlignment.Center
+    title_lbl.VerticalAlignment   = VerticalAlignment.Center
+    title_row.Children.Add(title_lbl)
 
-    # Text box — fills row 3
+    title_bg.Child = title_row
+    Grid.SetRow(title_bg, 0)
+    outer.Children.Add(title_bg)
+
+    # divider
+    div = Border()
+    div.Background = _c(50, 50, 70)
+    Grid.SetRow(div, 1)
+    outer.Children.Add(div)
+
+    # ── Body: context + prompt hint ─────────────────────────
+    body = Grid()
+    body.Background = _c(18, 18, 22)
+    body.Margin = Thickness(24, 16, 24, 8)
+
+    body_rows = Grid()
+
+    def add_body_row(v, star=False):
+        rd = RowDefinition()
+        rd.Height = GridLength(v, GridUnitType.Star if star else GridUnitType.Pixel)
+        body_rows.RowDefinitions.Add(rd)
+
+    add_body_row(26)      # context tag
+    add_body_row(10)      # spacer
+    add_body_row(1, True) # hint (fills)
+
+    ctx_pill = Border()
+    ctx_pill.Background    = _c(35, 35, 50)
+    ctx_pill.CornerRadius  = CornerRadius(4)
+    ctx_pill.Padding       = Thickness(10, 4, 10, 4)
+    ctx_pill.HorizontalAlignment = HorizontalAlignment.Left
+
+    ctx_text = TextBlock()
+    ctx_text.Text       = model_ctx_text
+    ctx_text.Foreground = _c(120, 120, 150)
+    ctx_text.FontSize   = 10
+    ctx_text.TextWrapping = TextWrapping.NoWrap
+    ctx_pill.Child = ctx_text
+    Grid.SetRow(ctx_pill, 0)
+    body_rows.Children.Add(ctx_pill)
+
+    hint_block = TextBlock()
+    hint_block.Foreground   = _c(55, 55, 75)
+    hint_block.FontSize     = 12
+    hint_block.TextWrapping = TextWrapping.Wrap
+    hint_block.VerticalAlignment = VerticalAlignment.Center
+    hint_block.Text = (
+        "Try:\n"
+        "  Create 5 storeys at 4m spacing\n"
+        "  Build a 12m x 8m floor plan with 200mm concrete walls on Level 1\n"
+        "  Create sheets A101-A115 with A1 title block, one floor plan per level\n"
+        "  Rename all rooms on Level 0 with prefix GF-\n"
+        "  Create a room schedule: Number, Name, Area, Level"
+    )
+    Grid.SetRow(hint_block, 2)
+    body_rows.Children.Add(hint_block)
+
+    body.Children.Add(body_rows)
+    Grid.SetRow(body, 2)
+    outer.Children.Add(body)
+
+    # divider2
+    div2 = Border()
+    div2.Background = _c(40, 40, 55)
+    Grid.SetRow(div2, 3)
+    outer.Children.Add(div2)
+
+    # ── Input area ───────────────────────────────────────────
+    input_bg = Border()
+    input_bg.Background = _c(24, 24, 32)
+    input_bg.Padding    = Thickness(16, 12, 16, 12)
+
+    input_grid = Grid()
+
+    col_text = ColumnDefinition()
+    col_text.Width = GridLength(1, GridUnitType.Star)
+    col_btn  = ColumnDefinition()
+    col_btn.Width  = GridLength(110, GridUnitType.Pixel)
+    input_grid.ColumnDefinitions.Add(col_text)
+    input_grid.ColumnDefinitions.Add(col_btn)
+
+    # TextBox — the actual input
     tb = TextBox()
     tb.AcceptsReturn = True
-    tb.TextWrapping = 3                             # Wrap
-    tb.VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+    tb.TextWrapping  = TextWrapping.Wrap
+    tb.VerticalScrollBarVisibility   = ScrollBarVisibility.Auto
     tb.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
-    tb.FontSize = 13
-    tb.Background = _brush(36, 36, 36)
-    tb.Foreground = _brush(235, 235, 235)
-    tb.CaretBrush = _brush(200, 169, 110)
-    tb.BorderBrush = _brush(70, 70, 70)
+    tb.FontSize     = 13
+    tb.MinHeight    = 70
+    tb.MaxHeight    = 90
+    tb.Background   = _c(30, 30, 40)
+    tb.Foreground   = _c(235, 235, 245)
+    tb.CaretBrush   = _c(200, 169, 110)
+    tb.BorderBrush  = _c(70, 70, 90)
     tb.BorderThickness = Thickness(1)
-    tb.Padding = Thickness(10)
+    tb.Padding      = Thickness(10, 8, 10, 8)
     tb.VerticalAlignment = VerticalAlignment.Stretch
-    tb.Margin = Thickness(0, 0, 0, 8)
-    tb_ref[0] = tb
-    place(tb, 3)
+    tb.Margin       = Thickness(0, 0, 12, 0)
+    Grid.SetColumn(tb, 0)
+    input_grid.Children.Add(tb)
 
-    # Bottom row: examples left, buttons right
-    bottom = Grid()
-    bc = Grid()
-    bottom.Children.Add(bc)
+    # Send button
+    send_col = StackPanel()
+    send_col.VerticalAlignment = VerticalAlignment.Bottom
+    Grid.SetColumn(send_col, 1)
 
-    eg = TextBlock()
-    eg.Text = (
-        "e.g.  Create 5 levels at 4m spacing  •  "
-        "Build a 12x8m floor plan with 200mm walls  •  "
-        "Create sheets A101-A110 with floor plan views"
-    )
-    eg.Foreground = _brush(90, 90, 90)
-    eg.FontSize = 10
-    eg.TextWrapping = 3
-    eg.VerticalAlignment = VerticalAlignment.Center
-    eg.HorizontalAlignment = HorizontalAlignment.Left
-    eg.Margin = Thickness(0, 0, 140, 0)
-    bottom.Children.Add(eg)
+    shortcut_hint = TextBlock()
+    shortcut_hint.Text = "Ctrl+Enter"
+    shortcut_hint.Foreground = _c(70, 70, 90)
+    shortcut_hint.FontSize   = 9
+    shortcut_hint.HorizontalAlignment = HorizontalAlignment.Center
+    shortcut_hint.Margin = Thickness(0, 0, 0, 4)
+    send_col.Children.Add(shortcut_hint)
 
-    # Run button
-    btn_run = Button()
-    btn_run.Content = "Run with Claude"
-    btn_run.Width = 130
-    btn_run.Height = 32
-    btn_run.Background = _brush(200, 169, 110)
-    btn_run.Foreground = _brush(18, 18, 18)
-    btn_run.FontSize = 12
-    btn_run.FontWeight = FontWeights.Bold
-    btn_run.HorizontalAlignment = HorizontalAlignment.Right
-    btn_run.Margin = Thickness(0, 0, 0, 0)
+    btn_send = Button()
+    btn_send.Content  = "Run with Claude"
+    btn_send.Height   = 40
+    btn_send.Background  = _c(200, 169, 110)
+    btn_send.Foreground  = _c(18, 18, 22)
+    btn_send.FontSize    = 12
+    btn_send.FontWeight  = FontWeights.Bold
+    btn_send.BorderThickness = Thickness(0)
+    send_col.Children.Add(btn_send)
 
-    # Cancel button
-    btn_cancel = Button()
-    btn_cancel.Content = "Cancel"
-    btn_cancel.Width = 80
-    btn_cancel.Height = 32
-    btn_cancel.Background = _brush(50, 50, 50)
-    btn_cancel.Foreground = _brush(200, 200, 200)
-    btn_cancel.FontSize = 12
-    btn_cancel.HorizontalAlignment = HorizontalAlignment.Right
-    btn_cancel.Margin = Thickness(0, 0, 136, 0)
+    input_grid.Children.Add(send_col)
+    input_bg.Child = input_grid
+    Grid.SetRow(input_bg, 4)
+    outer.Children.Add(input_bg)
 
-    bottom.Children.Add(btn_run)
-    bottom.Children.Add(btn_cancel)
-    place(bottom, 4)
-
-    # Key binding: Ctrl+Enter triggers Run
-    def on_key(s, e):
-        from System.Windows.Input import Key, ModifierKeys
-        if e.Key == Key.Return and (Keyboard.Modifiers == ModifierKeys.Control):
-            result[0] = tb.Text.strip()
+    # ── Events ───────────────────────────────────────────────
+    def on_run(s, e):
+        t = tb.Text.strip()
+        if t:
+            result[0] = t
             win.Close()
 
-    tb.KeyDown += on_key
+    def on_key(s, e):
+        if e.Key == Key.Return and Keyboard.Modifiers == ModifierKeys.Control:
+            t = tb.Text.strip()
+            if t:
+                result[0] = t
+                win.Close()
+        elif e.Key == Key.Escape:
+            win.Close()
 
-    def on_run(s, e):
-        result[0] = tb.Text.strip()
-        win.Close()
+    btn_send.Click += on_run
+    tb.KeyDown     += on_key
 
-    def on_cancel(s, e):
-        win.Close()
-
-    btn_run.Click += on_run
-    btn_cancel.Click += on_cancel
-
-    # Force focus to text box as soon as window loads
     def on_loaded(s, e):
         tb.Focus()
         Keyboard.Focus(tb)
 
     win.Loaded += on_loaded
-    win.Content = root
+    win.Content = outer
     win.ShowDialog()
-    return result[0] if result[0] else None
+    return result[0]
 
 
-# ---- Show dialog ----
-instruction = show_prompt_dialog(model_ctx)
-
+# ── Show dialog ───────────────────────────────────────────────
+instruction = show_chat_dialog(model_ctx)
 if not instruction:
     script.exit()
 
-# ---- System prompt ----
+# ── System prompt ─────────────────────────────────────────────
 SYSTEM = """\
 You are a Revit API Python expert writing code for pyRevit (IronPython 2.7).
 
-ENVIRONMENT — already available, do NOT re-import:
-  doc   -> Autodesk.Revit.DB.Document
-  uidoc -> Autodesk.Revit.UI.UIDocument
-  revit -> pyrevit.revit module
-  DB    -> Autodesk.Revit.DB module
-  forms -> pyrevit.forms module
-  output -> pyrevit script output
-  All DB classes (XYZ, Line, Wall, Level, ViewSheet, etc.) are in scope directly.
+ENVIRONMENT (already in scope, do NOT re-import):
+  doc, uidoc, revit, DB, forms, output
+  All DB classes: XYZ, Line, Wall, Level, ViewSheet, Floor, etc.
 
-UNITS: Revit internal = decimal feet. Always convert: 1m = 3.28084 ft, 1mm = 1/304.8 ft.
+UNITS: Revit internal = decimal feet.
+  1m = 3.28084 ft  |  1mm = 1/304.8 ft
 
-TRANSACTIONS: Wrap ALL model changes in:
+TRANSACTIONS: wrap ALL model changes in:
   with revit.Transaction("description"):
       ...
 
-STRICT RULES (IronPython 2.7):
-  - Use "{}".format() ONLY -- NO f-strings whatsoever
-  - No type hints, no walrus operator, no match/case
-  - forms.alert("msg", title="X") only -- NO ok_btn, NO warn_icon params
-  - output.print_code(code) -- 1 argument only, never 2
-  - Return ONLY executable Python code -- no markdown, no explanation, no fences
-  - Handle exceptions with try/except and surface via forms.alert()
-  - End every script with: forms.alert("Done: <summary>", title="Claude")
+STRICT RULES (IronPython 2.7 — no exceptions):
+  - "{}".format() ONLY. ZERO f-strings.
+  - No type hints, no walrus :=, no match/case
+  - forms.alert("msg", title="X") ONLY. Never ok_btn or warn_icon.
+  - output.print_code(code) -- 1 argument, never 2
+  - Return ONLY executable Python -- no markdown, no fences, no explanation
+  - Wrap all code in try/except. Surface errors via forms.alert()
+  - End with: forms.alert("Done: <one-line summary>", title="Claude")
 
-MODEL CONTEXT: """ + model_ctx
+MODEL: """ + model_ctx
 
-# ---- Call Claude ----
 output.print_md("# Claude Command")
 output.print_md("**Instruction:** " + instruction)
-output.print_md("Calling Claude (claude-sonnet-4-6)...")
+output.print_md("Calling Claude...")
 
 try:
     code = strip_fences(ask_claude(instruction, system=SYSTEM, max_tokens=1200))
@@ -254,20 +313,16 @@ except Exception as e:
 output.print_md("**Generated code:**")
 output.print_code(code)
 
-# ---- Confirm ----
 go = forms.alert(
-    "Code shown in output window.\n\nAll changes are undoable with Ctrl+Z.\n\nProceed?",
-    title="Execute Claude Code?",
-    cancel=True
+    "Code shown above in the output window.\nAll changes are undoable with Ctrl+Z.\n\nProceed?",
+    title="Execute?", cancel=True
 )
 if not go:
     output.print_md("*Cancelled.*")
     script.exit()
 
-# ---- Execute ----
 ctx = revit_exec_context(doc, uidoc, revit, DB, forms, output)
 ok, err = exec_claude_code(code, ctx)
 if not ok:
     output.print_md("**Execution error:**\n```\n{}\n```".format(err))
-    forms.alert("Execution failed. See output window.\n\n{}".format(err[:500]),
-                title="Claude Command Error")
+    forms.alert("Execution failed.\n\n{}".format(err[:500]), title="Error")
