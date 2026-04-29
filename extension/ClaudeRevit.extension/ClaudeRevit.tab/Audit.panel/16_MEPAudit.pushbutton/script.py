@@ -186,7 +186,7 @@ Numbered, severity [CRITICAL/WARNING/INFO]. Reference actual data.
 Be specific. Reference actual counts and values from the data.
 """.format(standard=region)
 
-prompt = "Audit this Revit MEP model:\n\n{}".format(json.dumps(data, indent=2))
+prompt = "Audit this Revit MEP model:\n\n{}".format(json.dumps(data, indent=2, ensure_ascii=True))
 
 try:
     report = ask_claude(prompt, system=SYSTEM, max_tokens=2500)

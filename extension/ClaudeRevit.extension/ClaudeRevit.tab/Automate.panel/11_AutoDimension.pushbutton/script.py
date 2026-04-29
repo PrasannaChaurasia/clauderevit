@@ -111,62 +111,37 @@ def dimension_walls_in_direction(wall_list, horizontal):
     with revit.Transaction("Auto-Dimension {}".format("H" if horizontal else "V")):
         for w in target_walls:
             try:
+                refs = _get_wall_references(w)
+                if len(refs) < 2:
+                    continue
+
                 lc    = w.Location.Curve
                 start = lc.GetEndPoint(0)
                 end   = lc.GetEndPoint(1)
 
                 if horizontal:
-                    mid_y   = (start.Y + end.Y) / 2.0
-                    dim_y   = mid_y - offset
-                    pt1     = XYZ(min(start.X, end.X), dim_y, 0)
-                    pt2     = XYZ(max(start.X, end.X), dim_y, 0)
+                    mid_y  = (start.Y + end.Y) / 2.0
+                    dim_y  = mid_y - offset
+                    pt1    = XYZ(min(start.X, end.X), dim_y, 0)
+                    pt2    = XYZ(max(start.X, end.X), dim_y, 0)
                 else:
-                    mid_x   = (start.X + end.X) / 2.0
-                    dim_x   = mid_x - offset
-                    pt1     = XYZ(dim_x, min(start.Y, end.Y), 0)
-                    pt2     = XYZ(dim_x, max(start.Y, end.Y), 0)
+                    mid_x  = (start.X + end.X) / 2.0
+                    dim_x  = mid_x - offset
+                    pt1    = XYZ(dim_x, min(start.Y, end.Y), 0)
+                    pt2    = XYZ(dim_x, max(start.Y, end.Y), 0)
+
+                if pt1.DistanceTo(pt2) < 0.01:
+                    continue
 
                 dim_line = Line.CreateBound(pt1, pt2)
-
                 ra = ReferenceArray()
-                # Use wall start/end references
-                ra.Append(w.GetReferenceByName("FINISH_FACE_START") or
-                          w.GetReferenceByName("CENTER_REFERENCE"))
-                ra.Append(w.GetReferenceByName("FINISH_FACE_END") or
-                          w.GetReferenceByName("CENTER_REFERENCE"))
-
+                for r in refs[:2]:
+                    ra.Append(r)
                 if ra.Size >= 2:
                     doc.Create.NewDimension(active_view, dim_line, ra)
                     dim_count[0] += 1
             except Exception:
-                # Fallback: try with face references
-                try:
-                    refs = _get_wall_references(w)
-                    if len(refs) < 2:
-                        continue
-                    lc    = w.Location.Curve
-                    start = lc.GetEndPoint(0)
-                    end   = lc.GetEndPoint(1)
-                    if horizontal:
-                        mid_y  = (start.Y + end.Y) / 2.0
-                        dim_y  = mid_y - offset
-                        pt1    = XYZ(min(start.X, end.X), dim_y, 0)
-                        pt2    = XYZ(max(start.X, end.X), dim_y, 0)
-                    else:
-                        mid_x  = (start.X + end.X) / 2.0
-                        dim_x  = mid_x - offset
-                        pt1    = XYZ(dim_x, min(start.Y, end.Y), 0)
-                        pt2    = XYZ(dim_x, max(start.Y, end.Y), 0)
-
-                    dim_line = Line.CreateBound(pt1, pt2)
-                    ra2 = ReferenceArray()
-                    for r in refs[:2]:
-                        ra2.Append(r)
-                    if ra2.Size >= 2:
-                        doc.Create.NewDimension(active_view, dim_line, ra2)
-                        dim_count[0] += 1
-                except Exception:
-                    pass
+                pass
 
 
 try:
@@ -175,12 +150,28 @@ try:
     if do_vert:
         dimension_walls_in_direction(walls, horizontal=False)
 
+    uidoc.RefreshActiveView()
+
     output.print_md("**Placed {} dimension strings.**".format(dim_count[0]))
-    forms.alert(
-        "Auto-Dimension complete.\n\nPlaced {} dimension strings in '{}'.".format(
-            dim_count[0], active_view.Name),
-        title="Auto-Dimension"
-    )
+
+    if dim_count[0] == 0:
+        forms.alert(
+            "No dimensions placed.\n\n"
+            "This can happen if:\n"
+            "- Wall face geometry references are not available in this view\n"
+            "- Walls are too short (under 6 inches)\n"
+            "- View is not a standard floor plan\n\n"
+            "Try switching to a Floor Plan view (not a Working Dimensions or Schematic view).",
+            title="Auto-Dimension"
+        )
+    else:
+        forms.alert(
+            "Auto-Dimension complete.\n\n"
+            "Placed {} dimension strings in '{}'.\n\n"
+            "If dimensions are not visible, press ZF (Zoom to Fit) or check crop region.".format(
+                dim_count[0], active_view.Name),
+            title="Auto-Dimension"
+        )
 
 except Exception as e:
     import traceback

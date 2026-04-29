@@ -14,7 +14,16 @@ from claude_client import ask_claude
 doc    = revit.doc
 output = script.get_output()
 
-output.print_md("# Claude Model Audit — {}".format(doc.Title))
+def _s(v):
+    """Return ASCII-safe string — prevents IronPython unicode codec errors."""
+    if v is None:
+        return ""
+    try:
+        return unicode(v).encode('ascii', 'ignore').decode('ascii')
+    except Exception:
+        return str(v)
+
+output.print_md("# Claude Model Audit — {}".format(_s(doc.Title)))
 output.print_md("Collecting model data — please wait...")
 
 # --- Walls ---
@@ -24,7 +33,7 @@ for w in walls:
     try:
         lp = w.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH)
         wall_data.append({
-            "type": w.WallType.Name,
+            "type": _s(w.WallType.Name),
             "length_m": round(lp.AsDouble() * 0.3048, 2) if lp else 0
         })
     except:
@@ -40,8 +49,8 @@ for r in rooms:
         num_p   = r.get_Parameter(BuiltInParameter.ROOM_NUMBER)
         level_p = r.get_Parameter(BuiltInParameter.ROOM_LEVEL_ID)
         room_data.append({
-            "name":    name_p.AsString() if name_p else "?",
-            "number":  num_p.AsString()  if num_p  else "?",
+            "name":    _s(name_p.AsString()) if name_p else "?",
+            "number":  _s(num_p.AsString())  if num_p  else "?",
             "area_sqm": round(area_p.AsDouble() * 0.0929, 2) if area_p else 0
         })
     except:
@@ -49,11 +58,11 @@ for r in rooms:
 
 # --- Sheets ---
 sheets = list(FilteredElementCollector(doc).OfClass(ViewSheet).ToElements())
-sheet_data = [{"number": s.SheetNumber, "name": s.Name} for s in sheets]
+sheet_data = [{"number": _s(s.SheetNumber), "name": _s(s.Name)} for s in sheets]
 
 # --- Levels ---
 levels = list(FilteredElementCollector(doc).OfClass(Level).ToElements())
-level_data = [{"name": l.Name, "elev_m": round(l.Elevation * 0.3048, 2)} for l in levels]
+level_data = [{"name": _s(l.Name), "elev_m": round(l.Elevation * 0.3048, 2)} for l in levels]
 
 # --- Summary for Claude ---
 model_data = {
@@ -83,7 +92,7 @@ output.print_md("Running Claude audit (claude-sonnet-4-6)...")
 
 try:
     report = ask_claude(
-        "Audit this Revit model:\n\n" + json.dumps(model_data, indent=2),
+        "Audit this Revit model:\n\n" + json.dumps(model_data, indent=2, ensure_ascii=True),
         system=SYSTEM
     )
 except Exception as e:

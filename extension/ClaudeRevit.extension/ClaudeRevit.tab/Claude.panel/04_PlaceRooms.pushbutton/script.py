@@ -49,30 +49,40 @@ if not instruction:
 SYSTEM = """\
 You are a Revit API Python expert. Generate IronPython 2.7 code to place rooms in Revit.
 
-ENVIRONMENT (in scope):
-  doc, uidoc, revit, DB, forms, output, all DB classes.
+ENVIRONMENT (in scope, do NOT import anything extra):
+  doc, uidoc, revit, DB, forms, output
+  FilteredElementCollector, Level, BuiltInCategory, BuiltInParameter, UV — all in scope.
 
-KEY APIs:
-  # Get level
-  lvl = next(l for l in FilteredElementCollector(doc).OfClass(Level).ToElements() if l.Name == "Level 0")
+BANNED IMPORTS — NEVER use these (they do not exist in this Revit version):
+  ViewDuplicateType, CopyPasteOptions, ElementTransformUtils
 
-  # Place room at UV position (in feet from origin)
+KEY API:
+  # Get a level
+  all_levels = list(FilteredElementCollector(doc).OfClass(Level).ToElements())
+  all_levels.sort(key=lambda l: l.Elevation)
+  lvl = all_levels[0]  # use lowest level, or match by name
+
+  # Place room at UV position (feet from project origin)
   room = doc.Create.NewRoom(lvl, UV(x_ft, y_ft))
   room.get_Parameter(BuiltInParameter.ROOM_NAME).Set("Living Room")
   room.get_Parameter(BuiltInParameter.ROOM_NUMBER).Set("GF-01")
 
-POSITIONING:
-  - Start grid at UV(5, 5). Each room spaced 20ft apart in a row.
-  - Rooms must be inside wall boundaries to get area — if no walls, place them anyway (area will be unenclosed).
-  - Number rooms sequentially: GF-01, GF-02 etc.
+POSITIONING STRATEGY:
+  - Place rooms in a grid starting at UV(10, 10), spaced 25ft apart.
+  - Each room on a new row after 4 rooms.
+  - Keep all coordinates positive and reasonable (under 300ft).
+  - Rooms without wall boundaries show area=0 — that is normal behaviour.
 
 TRANSACTION:
   with revit.Transaction("Place Rooms"):
-      ...
+      for each room: doc.Create.NewRoom(...)
 
-RULES:
+RULES (IronPython 2.7):
+  - "{{}}".format() ONLY. No f-strings.
+  - forms.alert("msg", title="X") only.
   - Return ONLY executable Python. No markdown. No explanation.
-  - End with: forms.alert("Rooms placed", title="Done")
+  - Wrap entire block in try/except.
+  - End with: forms.alert("{{}} rooms placed on {{}}".format(count, lvl.Name), title="Done")
 
 LEVELS: {lvl}
 """.format(lvl=json.dumps(level_info))

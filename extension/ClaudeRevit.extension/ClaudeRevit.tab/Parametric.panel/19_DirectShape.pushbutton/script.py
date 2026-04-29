@@ -104,15 +104,15 @@ with revit.Transaction("Create DirectShape"):
     builder = TessellatedShapeBuilder()
     builder.OpenConnectedFaceSet(False)
 
-    # Bottom face (Z=0)
+    # Bottom face (Z=0) — always use ElementId.InvalidElementId for material
     bottom = [XYZ(0,0,0), XYZ(ft(3),0,0), XYZ(ft(3),ft(2),0), XYZ(0,ft(2),0)]
-    builder.AddFace(TessellatedFace(bottom, DB.MaterialsMaterialId if hasattr(DB,'MaterialsMaterialId') else ElementId.InvalidElementId))
+    builder.AddFace(TessellatedFace(bottom, ElementId.InvalidElementId))
 
     # Top face
     top = [XYZ(0,ft(2),ft(4)), XYZ(ft(3),ft(2),ft(4)), XYZ(ft(3),0,ft(4)), XYZ(0,0,ft(4))]
     builder.AddFace(TessellatedFace(top, ElementId.InvalidElementId))
 
-    # 4 side faces (each as a quad)
+    # 4 side faces (quads) — always use ElementId.InvalidElementId for material
     sides = [
         [XYZ(0,0,0), XYZ(0,0,ft(4)), XYZ(ft(3),0,ft(4)), XYZ(ft(3),0,0)],
         [XYZ(ft(3),0,0), XYZ(ft(3),0,ft(4)), XYZ(ft(3),ft(2),ft(4)), XYZ(ft(3),ft(2),0)],
@@ -122,8 +122,11 @@ with revit.Transaction("Create DirectShape"):
     for face_pts in sides:
         builder.AddFace(TessellatedFace(face_pts, ElementId.InvalidElementId))
 
+    # IMPORTANT: Must set Target BEFORE calling Build()
+    # Use AnyGeometry to avoid "Multiple targets could match" error
+
     builder.CloseConnectedFaceSet()
-    builder.Target = TessellatedShapeBuilderTarget.Solid
+    builder.Target = TessellatedShapeBuilderTarget.AnyGeometry
     builder.Fallback = TessellatedShapeBuilderFallback.Salvage
     builder.Build()
     result = builder.GetBuildResult()
@@ -139,8 +142,10 @@ STRICT RULES (IronPython 2.7):
   - No type hints, no walrus :=
   - forms.alert("msg", title="X") only
   - Return ONLY executable Python. No markdown.
-  - All faces must be PLANAR (quads or triangles). For curves, approximate with many straight segments.
-  - TessellatedFace requires face normal to be consistent (outward-facing)
+  - All faces must be PLANAR (quads or triangles). For curves, approximate with many segments.
+  - TessellatedFace material: ALWAYS use ElementId.InvalidElementId — never DB.MaterialsMaterialId
+  - builder.Target: ALWAYS use TessellatedShapeBuilderTarget.AnyGeometry — never .Solid alone (causes "Multiple targets" error)
+  - builder.Fallback: TessellatedShapeBuilderFallback.Salvage
   - Wrap in try/except. End with forms.alert("Done: ...", title="DirectShape")
 """
 

@@ -18,6 +18,14 @@ from claude_client import ask_claude
 doc    = revit.doc
 output = script.get_output()
 
+def _s(v):
+    if v is None:
+        return ""
+    try:
+        return unicode(v).encode('ascii', 'ignore').decode('ascii')
+    except Exception:
+        return str(v)
+
 region = forms.CommandSwitchWindow.show(
     ["UK (Eurocode + UK NA)", "EU (Eurocode)", "US (AISC / ACI / IBC)", "International"],
     message="Select the structural code standard:"
@@ -39,12 +47,12 @@ for i, l in enumerate(levels):
     storey_h = None
     if i > 0:
         storey_h = round((l.Elevation - levels[i-1].Elevation) * 0.3048, 3)
-    level_data.append({"name": l.Name, "elev_m": round(l.Elevation * 0.3048, 3), "storey_height_m": storey_h})
+    level_data.append({"name": _s(l.Name), "elev_m": round(l.Elevation * 0.3048, 3), "storey_height_m": storey_h})
 data["levels"] = level_data
 
 # ── Grids ─────────────────────────────────────────────────────
 grids = list(FilteredElementCollector(doc).OfClass(Grid).ToElements())
-grid_names = [g.Name for g in grids]
+grid_names = [_s(g.Name) for g in grids]
 data["grid_count"] = len(grids)
 data["grid_names"] = grid_names[:30]
 
@@ -66,8 +74,8 @@ for c in columns[:60]:
     try:
         sym = c.Symbol
         col_data.append({
-            "type": sym.FamilyName + " : " + sym.Name,
-            "level": c.get_Parameter(BuiltInParameter.FAMILY_LEVEL_PARAM).AsValueString()
+            "type": _s(sym.FamilyName) + " : " + _s(sym.Name),
+            "level": _s(c.get_Parameter(BuiltInParameter.FAMILY_LEVEL_PARAM).AsValueString())
                      if c.get_Parameter(BuiltInParameter.FAMILY_LEVEL_PARAM) else "?"
         })
     except Exception:
@@ -198,7 +206,7 @@ Numbered, severity [CRITICAL/WARNING/INFO].
 Be specific. Reference actual type names and counts from the data.
 """.format(standard=region)
 
-prompt = "Audit this Revit structural model:\n\n{}".format(json.dumps(data, indent=2))
+prompt = "Audit this Revit structural model:\n\n{}".format(json.dumps(data, indent=2, ensure_ascii=True))
 
 try:
     report = ask_claude(prompt, system=SYSTEM, max_tokens=2500)

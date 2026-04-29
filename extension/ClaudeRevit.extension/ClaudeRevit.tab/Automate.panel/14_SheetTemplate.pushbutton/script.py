@@ -13,10 +13,11 @@ clr.AddReference("WindowsBase")
 
 from System.Windows import (Thickness, HorizontalAlignment, VerticalAlignment,
                              FontWeights, TextWrapping, WindowStartupLocation, ResizeMode)
+from System.Windows import CornerRadius
 from System.Windows.Controls import (Grid, StackPanel, Border, TextBlock, TextBox,
                                       Button, ComboBox, ComboBoxItem, CheckBox,
                                       ScrollBarVisibility, Orientation, ScrollViewer,
-                                      CornerRadius, Label)
+                                      Label)
 from System.Windows.Input import Keyboard, Key, ModifierKeys
 from wpf_helper import (base_window, title_bar, add_row, add_col, place,
                          label as wlabel, textbox, button, divider, pill,

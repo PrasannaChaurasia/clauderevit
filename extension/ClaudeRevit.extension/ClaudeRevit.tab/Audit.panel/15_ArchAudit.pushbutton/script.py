@@ -20,6 +20,14 @@ from claude_client import ask_claude
 doc    = revit.doc
 output = script.get_output()
 
+def _s(v):
+    if v is None:
+        return ""
+    try:
+        return unicode(v).encode('ascii', 'ignore').decode('ascii')
+    except Exception:
+        return str(v)
+
 # ── Region / standard selector ────────────────────────────────
 region = forms.CommandSwitchWindow.show(
     ["UK (BS EN ISO 19650 / Building Regs)", "EU (Eurocode + EN standards)",
@@ -39,7 +47,7 @@ data = {}
 # Levels
 levels = list(FilteredElementCollector(doc).OfClass(Level).ToElements())
 levels.sort(key=lambda l: l.Elevation)
-data["levels"] = [{"name": l.Name, "elev_m": round(l.Elevation * 0.3048, 3)} for l in levels]
+data["levels"] = [{"name": _s(l.Name), "elev_m": round(l.Elevation * 0.3048, 3)} for l in levels]
 
 # Walls
 walls = list(FilteredElementCollector(doc).OfClass(Wall).ToElements())
@@ -48,9 +56,9 @@ for w in walls:
     try:
         lp = w.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH)
         wall_data.append({
-            "type": w.WallType.Name,
+            "type": _s(w.WallType.Name),
             "length_m": round(lp.AsDouble() * 0.3048, 2) if lp else 0,
-            "level": w.get_Parameter(BuiltInParameter.WALL_BASE_CONSTRAINT).AsValueString() if w.get_Parameter(BuiltInParameter.WALL_BASE_CONSTRAINT) else "?"
+            "level": _s(w.get_Parameter(BuiltInParameter.WALL_BASE_CONSTRAINT).AsValueString()) if w.get_Parameter(BuiltInParameter.WALL_BASE_CONSTRAINT) else "?"
         })
     except Exception:
         pass
@@ -68,12 +76,12 @@ for r in rooms:
         level = r.get_Parameter(BuiltInParameter.ROOM_LEVEL_ID)
         dept  = r.LookupParameter("Department")
         room_data.append({
-            "name":   name or "",
-            "number": num  or "",
+            "name":   _s(name) or "",
+            "number": _s(num)  or "",
             "area_sqm": round(area, 2),
-            "level": r.Level.Name if r.Level else "?",
-            "department": dept.AsString() if dept and dept.AsString() else "",
-            "has_tag": False  # checked below
+            "level": _s(r.Level.Name) if r.Level else "?",
+            "department": _s(dept.AsString()) if dept and dept.AsString() else "",
+            "has_tag": False
         })
     except Exception:
         pass
@@ -85,7 +93,9 @@ tagged_room_ids = set()
 all_tags = list(FilteredElementCollector(doc).OfClass(IndependentTag).ToElements())
 for tag in all_tags:
     try:
-        tagged_room_ids.add(tag.TaggedLocalElementId)
+        tid = getattr(tag, 'TaggedLocalElementId', None) or getattr(tag, 'TaggedElementId', None)
+        if tid:
+            tagged_room_ids.add(tid)
     except Exception:
         pass
 untagged_rooms = [r for r in room_data if r.get("number", "") not in tagged_room_ids]
@@ -98,10 +108,10 @@ for s in sheets:
     drawn = s.LookupParameter("Drawn By")
     checked = s.LookupParameter("Checked By")
     sheet_data.append({
-        "number": s.SheetNumber,
-        "name":   s.Name,
-        "drawn_by":   drawn.AsString() if drawn and drawn.AsString() else "",
-        "checked_by": checked.AsString() if checked and checked.AsString() else "",
+        "number": _s(s.SheetNumber),
+        "name":   _s(s.Name),
+        "drawn_by":   _s(drawn.AsString()) if drawn and drawn.AsString() else "",
+        "checked_by": _s(checked.AsString()) if checked and checked.AsString() else "",
         "viewport_count": len(list(Viewport.GetViewportIds(doc, s.Id) if hasattr(Viewport, 'GetViewportIds') else []))
     })
 data["sheets"] = sheet_data[:50]
@@ -206,7 +216,7 @@ What is done well in this model.
 Be specific. Reference actual data. Do not be generic.
 """.format(standard=region)
 
-prompt = "Audit this Revit architectural model:\n\n{}".format(json.dumps(data, indent=2))
+prompt = "Audit this Revit architectural model:\n\n{}".format(json.dumps(data, indent=2, ensure_ascii=True))
 
 try:
     report = ask_claude(prompt, system=SYSTEM, max_tokens=3000)

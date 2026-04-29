@@ -57,12 +57,17 @@ CRITICAL SCHEDULE API RULES:
           except Exception:
               pass
 
-  # Sort (get field from definition after adding):
+  # Sort — ONLY do this if fields were actually added:
   added = definition.GetFieldOrder()
-  if added:
-      field = definition.GetField(added[0])
-      sort_field = ScheduleSortGroupField(field.FieldId, ScheduleSortOrder.Ascending)
-      definition.AddSortGroupField(sort_field)
+  if added and len(added) > 0:
+      try:
+          field = definition.GetField(added[0])
+          sort_field = ScheduleSortGroupField()
+          sort_field.FieldId = field.FieldId
+          sort_field.SortOrder = ScheduleSortOrder.Ascending
+          definition.AddSortGroupField(sort_field)
+      except Exception:
+          pass  # Sorting is optional — skip if it fails
 
 VALID CATEGORIES for CreateSchedule:
   OST_Walls, OST_Rooms, OST_Doors, OST_Windows, OST_Floors,

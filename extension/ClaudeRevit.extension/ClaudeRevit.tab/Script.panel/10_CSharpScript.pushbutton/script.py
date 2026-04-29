@@ -14,8 +14,9 @@ clr.AddReference("Microsoft.CSharp")
 clr.AddReference("System.Core")
 
 from System.Windows import Thickness, HorizontalAlignment, VerticalAlignment, FontWeights, TextWrapping
+from System.Windows import CornerRadius
 from System.Windows.Controls import (Grid, StackPanel, Border, TextBlock, TextBox, Button,
-                                      Orientation, ScrollBarVisibility, CornerRadius)
+                                      Orientation, ScrollBarVisibility)
 from System.Windows.Media import FontFamily
 from System.Windows.Input import Keyboard, Key, ModifierKeys
 from System import Type, Activator

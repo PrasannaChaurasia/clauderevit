@@ -153,8 +153,24 @@ for choice in tag_choices:
     except Exception as e:
         output.print_md("- **{}**: error — {}".format(choice, str(e)))
 
-summary = "\n".join("{}: {}".format(k, v) for k, v in tag_counts.items())
-forms.alert(
-    "Auto-Tag complete.\n\nTotal tags placed: {}\n\n{}".format(total, summary),
-    title="Auto-Tag"
-)
+uidoc.RefreshActiveView()
+
+summary = "\n".join("{}: {} tags".format(k, v) for k, v in tag_counts.items())
+if total == 0:
+    forms.alert(
+        "No tags placed.\n\n"
+        "Possible reasons:\n"
+        "- No tag families loaded for the selected categories\n"
+        "- No elements of those categories in the active view\n"
+        "- Active view is not a Floor Plan or Section\n\n"
+        "Load tag families via Insert > Load Family, then retry.",
+        title="Auto-Tag"
+    )
+else:
+    forms.alert(
+        "Auto-Tag complete.\n\n"
+        "Total tags placed: {}\n\n{}\n\n"
+        "If tags are not visible, press ZF (Zoom to Fit) or check Visibility/Graphics (VV).".format(
+            total, summary),
+        title="Auto-Tag"
+    )
