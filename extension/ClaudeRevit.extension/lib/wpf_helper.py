@@ -18,7 +18,7 @@ from System.Windows.Controls import (
     Grid, RowDefinition, ColumnDefinition, StackPanel, Border,
     TextBlock, TextBox, Button, ComboBox, ComboBoxItem,
     CheckBox, ListBox, ListBoxItem, ScrollViewer, Label,
-    ScrollBarVisibility, Orientation, Separator
+    ScrollBarVisibility, Orientation, Separator, WrapPanel
 )
 from System.Windows import CornerRadius
 from System.Windows.Input import Keyboard, Key, ModifierKeys
@@ -169,6 +169,222 @@ def title_bar(doc_title, panel_name):
 
     bg.Child = row
     return bg
+
+
+def chat_prompt(title, message, placeholder="Type your instruction...",
+                default="", context=None, width=760, height=520):
+    """Large chat-style prompt dialog. Returns entered string or None if cancelled."""
+    result = [None]
+
+    win = base_window(title, "", width=width, height=height)
+
+    outer = Grid()
+    add_row(outer, 44)
+    add_row(outer, 1)
+    add_row(outer, 1, True)
+    add_row(outer, 1)
+    add_row(outer, 54)
+
+    place(outer, title_bar("ClaudeRevit", title), 0)
+    d1 = Border(); d1.Background = BORDER; d1.Height = 1
+    place(outer, d1, 1)
+
+    content = Grid()
+    content.Background = BG_DARK
+    content.Margin = Thickness(24, 16, 24, 0)
+    if context:
+        add_row(content, 1, True)
+        add_row(content, 30)
+    else:
+        add_row(content, 1, True)
+
+    inner = StackPanel()
+    inner.Orientation = Orientation.Vertical
+
+    msg_tb = TextBlock()
+    msg_tb.Text = message
+    msg_tb.Foreground = FG_SEC
+    msg_tb.FontSize = 12
+    msg_tb.TextWrapping = TextWrapping.Wrap
+    msg_tb.Margin = Thickness(0, 0, 0, 14)
+    inner.Children.Add(msg_tb)
+
+    inp = TextBox()
+    inp.FontSize = 13
+    inp.Background = BG_INP
+    inp.Foreground = FG_PRI
+    inp.CaretBrush = GOLD
+    inp.BorderBrush = GOLD
+    inp.BorderThickness = Thickness(1)
+    inp.Padding = Thickness(12, 10, 12, 10)
+    inp.AcceptsReturn = True
+    inp.TextWrapping = TextWrapping.Wrap
+    inp.VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+    inp.HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
+    inp.MinHeight = 130
+    inp.MaxHeight = 300
+    inp.Text = default if default else ""
+    inner.Children.Add(inp)
+
+    sv = ScrollViewer()
+    sv.VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+    sv.Content = inner
+    place(content, sv, 0)
+
+    if context:
+        ctx_tb = TextBlock()
+        ctx_tb.Text = context
+        ctx_tb.Foreground = FG_DIM
+        ctx_tb.FontSize = 10
+        ctx_tb.TextWrapping = TextWrapping.Wrap
+        ctx_tb.VerticalAlignment = VerticalAlignment.Center
+        place(content, ctx_tb, 1)
+
+    place(outer, content, 2)
+
+    d2 = Border(); d2.Background = BORDER; d2.Height = 1
+    place(outer, d2, 3)
+
+    bottom = Grid()
+    bottom.Background = BG_MID
+    add_col(bottom, 1, True)
+    add_col(bottom, 130)
+    add_col(bottom, 8)
+    add_col(bottom, 110)
+    add_col(bottom, 16)
+
+    hint_tb = label("Shift+Enter: new line  |  Enter: confirm  |  Esc: cancel",
+                    size=10, color=FG_DIM)
+    hint_tb.VerticalAlignment = VerticalAlignment.Center
+    hint_tb.Margin = Thickness(16, 0, 0, 0)
+    place(bottom, hint_tb, 0, 0)
+
+    btn_ok = button("Confirm", gold=True, width=120, height=34)
+    btn_ok.Margin = Thickness(0, 10, 0, 10)
+    place(bottom, btn_ok, 0, 1)
+
+    btn_cancel = button("Cancel", gold=False, width=100, height=34)
+    btn_cancel.Margin = Thickness(0, 10, 0, 10)
+    place(bottom, btn_cancel, 0, 3)
+
+    place(outer, bottom, 4)
+
+    def on_confirm(s, e):
+        txt = inp.Text.strip() if inp.Text else ""
+        if txt:
+            result[0] = txt
+        win.Close()
+
+    def on_cancel(s, e):
+        win.Close()
+
+    def on_key(s, e):
+        if e.Key == Key.Return and Keyboard.Modifiers != ModifierKeys.Shift:
+            txt = inp.Text.strip() if inp.Text else ""
+            if txt:
+                result[0] = txt
+            win.Close()
+            e.Handled = True
+        elif e.Key == Key.Escape:
+            win.Close()
+
+    btn_ok.Click += on_confirm
+    btn_cancel.Click += on_cancel
+    inp.KeyDown += on_key
+    win.Loaded += lambda s, e: (inp.Focus(), Keyboard.Focus(inp),
+                                setattr(inp, "CaretIndex", len(inp.Text) if inp.Text else 0))
+    win.Content = outer
+    win.ShowDialog()
+    return result[0]
+
+
+def switch_dialog(choices, message, title="Select"):
+    """Dark tile-based choice dialog replacing CommandSwitchWindow. Returns selected string or None."""
+    result = [None]
+    n = len(choices)
+    est_height = 44 + 1 + max(140, 52 * ((n + 1) // 2) + 80) + 1 + 54
+    win = base_window(title, "", width=680, height=min(est_height, 520))
+
+    outer = Grid()
+    add_row(outer, 44)
+    add_row(outer, 1)
+    add_row(outer, 1, True)
+    add_row(outer, 1)
+    add_row(outer, 54)
+
+    place(outer, title_bar("ClaudeRevit", title), 0)
+    d1 = Border(); d1.Background = BORDER; d1.Height = 1
+    place(outer, d1, 1)
+
+    inner = StackPanel()
+    inner.Orientation = Orientation.Vertical
+    inner.Margin = Thickness(24, 16, 24, 0)
+
+    msg_tb = TextBlock()
+    msg_tb.Text = message
+    msg_tb.Foreground = FG_SEC
+    msg_tb.FontSize = 12
+    msg_tb.TextWrapping = TextWrapping.Wrap
+    msg_tb.Margin = Thickness(0, 0, 0, 16)
+    inner.Children.Add(msg_tb)
+
+    tiles = WrapPanel()
+    tiles.Orientation = Orientation.Horizontal
+
+    def _make_handler(choice):
+        def _h(s, e):
+            result[0] = choice
+            win.Close()
+        return _h
+
+    for ch in choices:
+        btn = Button()
+        btn.Content = ch
+        btn.FontSize = 12
+        btn.Background = BG_CARD
+        btn.Foreground = FG_PRI
+        btn.BorderBrush = BORDER
+        btn.BorderThickness = Thickness(1)
+        btn.Padding = Thickness(16, 10, 16, 10)
+        btn.Margin = Thickness(0, 0, 8, 8)
+        btn.MinWidth = 160
+        btn.MaxWidth = 290
+        btn.Click += _make_handler(ch)
+        tiles.Children.Add(btn)
+
+    inner.Children.Add(tiles)
+
+    sv = ScrollViewer()
+    sv.VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+    sv.Content = inner
+    place(outer, sv, 2)
+
+    d2 = Border(); d2.Background = BORDER; d2.Height = 1
+    place(outer, d2, 3)
+
+    bottom = Grid()
+    bottom.Background = BG_MID
+    add_col(bottom, 1, True)
+    add_col(bottom, 110)
+    add_col(bottom, 16)
+
+    btn_cancel = button("Cancel", gold=False, width=100, height=34)
+    btn_cancel.Margin = Thickness(0, 10, 0, 10)
+    place(bottom, btn_cancel, 0, 1)
+    place(outer, bottom, 4)
+
+    def on_cancel(s, e):
+        win.Close()
+
+    def on_win_key(s, e):
+        if e.Key == Key.Escape:
+            win.Close()
+
+    btn_cancel.Click += on_cancel
+    win.KeyDown += on_win_key
+    win.Content = outer
+    win.ShowDialog()
+    return result[0]
 
 
 def base_window(title, doc_title, width=760, height=580):

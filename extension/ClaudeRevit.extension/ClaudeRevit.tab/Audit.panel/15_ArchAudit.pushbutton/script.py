@@ -16,6 +16,7 @@ from Autodesk.Revit.DB import (
 )
 from Autodesk.Revit.DB.Architecture import Room as ArchRoom
 from claude_client import ask_claude
+from wpf_helper import switch_dialog
 
 doc    = revit.doc
 output = script.get_output()
@@ -29,10 +30,17 @@ def _s(v):
         return str(v)
 
 # ── Region / standard selector ────────────────────────────────
-region = forms.CommandSwitchWindow.show(
-    ["UK (BS EN ISO 19650 / Building Regs)", "EU (Eurocode + EN standards)",
-     "US (IBC / AIA standards)", "International (general best practice)"],
-    message="Select the code standard for this audit:"
+region = switch_dialog(
+    [
+        "UK (BS EN ISO 19650 / Building Regs)",
+        "EU (Eurocode + EN standards)",
+        "US (IBC / AIA standards)",
+        "Australia / NZ (NCC / AS standards)",
+        "Middle East (IBC + local)",
+        "International (general best practice)",
+    ],
+    message="Select the code standard for this audit:",
+    title="Architectural Audit"
 )
 if not region:
     script.exit()

@@ -14,6 +14,7 @@ from Autodesk.Revit.DB import (
     FamilyInstance, Structure
 )
 from claude_client import ask_claude
+from wpf_helper import switch_dialog
 
 doc    = revit.doc
 output = script.get_output()
@@ -26,9 +27,17 @@ def _s(v):
     except Exception:
         return str(v)
 
-region = forms.CommandSwitchWindow.show(
-    ["UK (Eurocode + UK NA)", "EU (Eurocode)", "US (AISC / ACI / IBC)", "International"],
-    message="Select the structural code standard:"
+region = switch_dialog(
+    [
+        "UK (Eurocode + UK NA)",
+        "EU (Eurocode)",
+        "US (AISC / ACI / IBC)",
+        "Australia / NZ (AS 4100 / NZS 3404)",
+        "Middle East (BS + local)",
+        "International (general best practice)",
+    ],
+    message="Select the structural code standard for this audit:",
+    title="Structural Audit"
 )
 if not region:
     script.exit()

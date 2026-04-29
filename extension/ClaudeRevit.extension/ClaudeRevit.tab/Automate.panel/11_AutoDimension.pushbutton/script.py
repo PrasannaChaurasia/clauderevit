@@ -14,6 +14,7 @@ from Autodesk.Revit.DB import (
     BuiltInParameter, BuiltInCategory, ElementId,
     WallLocationLine, Options
 )
+from wpf_helper import switch_dialog
 
 doc   = revit.doc
 uidoc = revit.uidoc
@@ -41,9 +42,10 @@ if not walls:
     script.exit()
 
 # ── Ask user for dimension direction ─────────────────────────
-choice = forms.CommandSwitchWindow.show(
+choice = switch_dialog(
     ["Horizontal walls", "Vertical walls", "Both directions"],
-    message="Which walls to dimension in '{}'?".format(active_view.Name)
+    message="Which walls to dimension in '{}'?".format(active_view.Name),
+    title="Auto-Dimension"
 )
 if not choice:
     script.exit()

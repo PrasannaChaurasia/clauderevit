@@ -10,6 +10,7 @@ from pyrevit import revit, DB, forms, script
 from Autodesk.Revit.DB import (FilteredElementCollector, Wall, Floor,
     ViewSheet, Level, BuiltInCategory)
 from claude_client import ask_claude
+from wpf_helper import chat_prompt
 
 doc    = revit.doc
 output = script.get_output()
@@ -26,32 +27,40 @@ try:
 except Exception as e:
     model_ctx = "Model: {} (snapshot error: {})".format(doc.Title, e)
 
-question = forms.ask_for_string(
-    prompt=(
-        "Ask Claude anything.\n\n"
+question = chat_prompt(
+    title="Ask Claude",
+    message=(
+        "Ask anything about your model, BIM standards, or Revit workflows.\n\n"
         "Examples:\n"
         "  What is the recommended wall structure for a UK residential project?\n"
         "  How should I organise my sheet numbering for a mixed-use development?\n"
         "  What BIM Level 2 requirements apply to my model?\n"
         "  How do I create a parametric curtain wall in Revit?\n"
-        "  What data should I capture in room parameters for a healthcare project?\n\n"
-        + model_ctx
+        "  What data should I capture in room parameters for a healthcare project?"
     ),
-    title="Ask Claude",
-    default=""
+    context=model_ctx
 )
 
 if not question:
     script.exit()
 
 SYSTEM = """\
-You are an expert architectural BIM consultant specialising in Autodesk Revit, UK building standards, and BIM Level 2.
+You are an expert architectural BIM consultant specialising in Autodesk Revit, UK building standards, BIM Level 2, and computational design.
 You are working with Prasanna Chaurasia, an architectural designer and BIM specialist at Urban Matrix, Manchester.
-Give precise, actionable answers. Reference real Revit workflows and UK standards where relevant.
-Current model context: """ + model_ctx
+
+Give detailed, structured, actionable answers. Follow this format where relevant:
+- **Direct answer** first, 1-3 sentences
+- **Step-by-step** if the task involves a workflow (numbered)
+- **Standards reference** — cite actual regulation numbers, clause references (e.g. BS EN ISO 19650, Part M Approved Document, NEC Article)
+- **Revit-specific notes** — menu paths, parameter names, family categories, API class names
+- **Common mistakes** — flag 1-2 pitfalls to avoid
+- **Model context** — reference the actual model data provided where relevant
+
+Be specific. Never be vague. Reference real Revit UI paths, actual standard clause numbers, and real parameter names.
+Current model: """ + model_ctx
 
 try:
-    answer = ask_claude(question, system=SYSTEM)
+    answer = ask_claude(question, system=SYSTEM, max_tokens=2000)
 except Exception as e:
     forms.alert("Claude API error:\n{}".format(e))
     script.exit()

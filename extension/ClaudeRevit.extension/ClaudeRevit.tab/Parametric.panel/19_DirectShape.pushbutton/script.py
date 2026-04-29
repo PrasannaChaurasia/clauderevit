@@ -15,6 +15,7 @@ from Autodesk.Revit.DB import (
     TessellatedShapeBuilderTarget, TessellatedShapeBuilderFallback
 )
 from claude_client import ask_claude, strip_fences, exec_claude_code, revit_exec_context
+from wpf_helper import chat_prompt, switch_dialog
 
 doc    = revit.doc
 uidoc  = revit.uidoc
@@ -27,7 +28,7 @@ except Exception:
     model_ctx = doc.Title
 
 # ── Shape selector ────────────────────────────────────────────
-shape_type = forms.CommandSwitchWindow.show(
+shape_type = switch_dialog(
     [
         "Box / rectangular prism",
         "Cylinder",
@@ -37,13 +38,15 @@ shape_type = forms.CommandSwitchWindow.show(
         "Extruded profile",
         "Custom — describe your shape",
     ],
-    message="Select DirectShape geometry type:"
+    message="Select the DirectShape geometry type to create:",
+    title="DirectShape"
 )
 if not shape_type:
     script.exit()
 
-description = forms.ask_for_string(
-    prompt=(
+description = chat_prompt(
+    title="DirectShape — {}".format(shape_type),
+    message=(
         "Describe the shape to create.\n\n"
         "Examples:\n"
         "  Box 3m x 2m x 4m at origin on Level 0\n"
@@ -53,16 +56,16 @@ description = forms.ask_for_string(
         "  Irregular 5-sided prism from coordinates: (0,0),(4,0),(5,3),(3,5),(0,4), height 3m\n\n"
         "Specify position (X,Y in metres from project origin) and the level."
     ),
-    title="DirectShape — {}".format(shape_type),
-    default=""
+    context=model_ctx
 )
 if not description:
     script.exit()
 
 # ── Category selector ─────────────────────────────────────────
-category = forms.CommandSwitchWindow.show(
+category = switch_dialog(
     ["Generic Model", "Mass", "Structural Column", "Wall", "Furniture"],
-    message="Assign to category:"
+    message="Assign this DirectShape to a Revit category:",
+    title="DirectShape — Category"
 )
 cat_map = {
     "Generic Model":    BuiltInCategory.OST_GenericModel,

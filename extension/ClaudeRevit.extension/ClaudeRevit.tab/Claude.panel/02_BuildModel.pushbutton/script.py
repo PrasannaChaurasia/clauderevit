@@ -9,6 +9,7 @@ sys.path.insert(0, _lib)
 from pyrevit import revit, DB, forms, script
 from Autodesk.Revit.DB import FilteredElementCollector, Level, Wall, WallType
 from claude_client import ask_claude, strip_fences, exec_claude_code, revit_exec_context
+from wpf_helper import chat_prompt
 
 doc   = revit.doc
 uidoc = revit.uidoc
@@ -19,20 +20,19 @@ wall_types = list(FilteredElementCollector(doc).OfClass(WallType).ToElements())
 level_info = [{"name": l.Name, "elev_ft": round(l.Elevation, 4)} for l in levels]
 wt_names   = [wt.Name for wt in wall_types[:8]]
 
-brief = forms.ask_for_string(
-    prompt=(
+brief = chat_prompt(
+    title="Build Model",
+    message=(
         "Describe the building or space to build.\n\n"
         "Examples:\n"
         "  Rectangular room 6m x 4m x 3m tall on Level 0, Generic 200mm walls\n"
         "  Two-storey building 12m x 8m. Ground floor 3.5m, First floor 3m.\n"
-        "  L-shaped plan: 10m x 4m + 4m x 6m wing on Level 0\n\n"
-        "Levels: {lvl}\nWall types: {wt}"
-    ).format(
-        lvl=", ".join(l["name"] for l in level_info),
-        wt=", ".join(wt_names)
+        "  L-shaped plan: 10m x 4m + 4m x 6m wing on Level 0"
     ),
-    title="Build Model — {}".format(doc.Title),
-    default=""
+    context="Levels: {}  |  Wall types: {}".format(
+        ", ".join(l["name"] for l in level_info),
+        ", ".join(wt_names)
+    )
 )
 
 if not brief:

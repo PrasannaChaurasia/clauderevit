@@ -9,6 +9,7 @@ sys.path.insert(0, _lib)
 from pyrevit import revit, DB, forms, script
 from Autodesk.Revit.DB import FilteredElementCollector, Level, BuiltInCategory, BuiltInParameter
 from claude_client import ask_claude, strip_fences, exec_claude_code, revit_exec_context
+from wpf_helper import chat_prompt
 
 doc   = revit.doc
 uidoc = revit.uidoc
@@ -27,20 +28,19 @@ for r in FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Rooms).ToE
     except:
         pass
 
-instruction = forms.ask_for_string(
-    prompt=(
+instruction = chat_prompt(
+    title="Place Rooms",
+    message=(
         "Describe the rooms to place.\n\n"
         "Examples:\n"
         "  Residential: Living Room, Kitchen, Bedroom 1, Bedroom 2, Bathroom on Level 0\n"
         "  Office: Reception, 4 Offices, Meeting Room, Kitchen on Level 0\n"
-        "  Hotel room: Entrance, Bedroom, Ensuite, Wardrobe\n\n"
-        "Levels: {lvl}\nExisting rooms: {er}"
-    ).format(
-        lvl=", ".join(l["name"] for l in level_info),
-        er=", ".join(r["name"] for r in existing_rooms[:8]) or "None"
+        "  Hotel room: Entrance, Bedroom, Ensuite, Wardrobe"
     ),
-    title="Place Rooms",
-    default=""
+    context="Levels: {}  |  Existing rooms: {}".format(
+        ", ".join(l["name"] for l in level_info),
+        ", ".join(r["name"] for r in existing_rooms[:8]) or "None"
+    )
 )
 
 if not instruction:

@@ -9,6 +9,7 @@ sys.path.insert(0, _lib)
 from pyrevit import revit, DB, forms, script
 from Autodesk.Revit.DB import FilteredElementCollector, Level, ViewFamilyType, ViewFamily, View
 from claude_client import ask_claude, strip_fences, exec_claude_code, revit_exec_context
+from wpf_helper import chat_prompt
 
 doc   = revit.doc
 uidoc = revit.uidoc
@@ -20,22 +21,21 @@ level_info = [{"name": l.Name, "elev_ft": round(l.Elevation, 4)} for l in levels
 existing_views = [v.Name for v in FilteredElementCollector(doc).OfClass(View).ToElements()
                   if not v.IsTemplate and v.Name][:15]
 
-instruction = forms.ask_for_string(
-    prompt=(
+instruction = chat_prompt(
+    title="Generate Views",
+    message=(
         "Describe the views to create.\n\n"
         "Examples:\n"
         "  Floor plan for every level\n"
         "  North South East West elevations\n"
         "  One 3D isometric view of the whole model\n"
         "  Reflected ceiling plan for Level 0\n"
-        "  Section through X=5m cutting east-west\n\n"
-        "Levels: {lvl}\nExisting views: {ev}"
-    ).format(
-        lvl=", ".join(l["name"] for l in level_info),
-        ev=", ".join(existing_views)
+        "  Section through X=5m cutting east-west"
     ),
-    title="Generate Views",
-    default=""
+    context="Levels: {}  |  Existing: {}".format(
+        ", ".join(l["name"] for l in level_info),
+        ", ".join(existing_views)
+    )
 )
 
 if not instruction:

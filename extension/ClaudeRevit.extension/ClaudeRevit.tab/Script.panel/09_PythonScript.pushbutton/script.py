@@ -19,7 +19,7 @@ from System.Windows.Media import FontFamily
 from System.Windows.Input import Keyboard, Key, ModifierKeys
 
 from wpf_helper import (base_window, title_bar, add_row, add_col, place,
-                         label, button, divider, pill,
+                         label, button, divider, pill, chat_prompt,
                          GOLD, BG_MID, BG_CARD, BG_INP, BG_DARK,
                          FG_PRI, FG_SEC, FG_DIM, BORDER, rgb)
 
@@ -166,10 +166,10 @@ if not code_text or not code_text.strip():
     script.exit()
 
 if user_action == "generate":
-    desc = forms.ask_for_string(
-        prompt="Describe what the Python script should do in Revit:",
-        title="Ask Claude — Python Generation",
-        default=""
+    desc = chat_prompt(
+        title="Ask Claude — Generate Python Script",
+        message="Describe what the Python script should do in Revit.",
+        context=model_ctx
     )
     if not desc:
         script.exit()

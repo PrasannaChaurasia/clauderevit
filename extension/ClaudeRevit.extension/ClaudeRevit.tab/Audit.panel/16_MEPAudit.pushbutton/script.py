@@ -14,14 +14,22 @@ from Autodesk.Revit.DB import (
     Mechanical, Plumbing, Electrical
 )
 from claude_client import ask_claude
+from wpf_helper import switch_dialog
 
 doc    = revit.doc
 output = script.get_output()
 
-region = forms.CommandSwitchWindow.show(
-    ["UK (CIBSE / BS standards)", "EU (EN standards)",
-     "US (ASHRAE / NEC / IPC)", "International (general best practice)"],
-    message="Select the MEP code standard for this audit:"
+region = switch_dialog(
+    [
+        "UK (CIBSE / BS standards)",
+        "EU (EN standards)",
+        "US (ASHRAE / NEC / IPC)",
+        "Australia / NZ (AS/NZS standards)",
+        "Middle East (ASHRAE + local)",
+        "International (general best practice)",
+    ],
+    message="Select the MEP code standard for this audit:",
+    title="MEP Audit"
 )
 if not region:
     script.exit()

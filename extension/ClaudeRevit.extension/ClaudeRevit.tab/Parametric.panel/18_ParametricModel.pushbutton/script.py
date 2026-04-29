@@ -13,6 +13,7 @@ from Autodesk.Revit.DB import (
     DirectShape, ElementId, BuiltInCategory
 )
 from claude_client import ask_claude, strip_fences, exec_claude_code, revit_exec_context
+from wpf_helper import chat_prompt, switch_dialog
 
 doc    = revit.doc
 uidoc  = revit.uidoc
@@ -27,7 +28,7 @@ except Exception:
     model_ctx = doc.Title
 
 # ── Geometry type selector ────────────────────────────────────
-geom_type = forms.CommandSwitchWindow.show(
+geom_type = switch_dialog(
     [
         "Parametric facade panel array",
         "Twisted / rotated tower form",
@@ -37,23 +38,23 @@ geom_type = forms.CommandSwitchWindow.show(
         "Data-driven floor plan from coordinates",
         "Custom — describe anything",
     ],
-    message="Select parametric geometry type:"
+    message="Select the parametric geometry type to generate:",
+    title="Parametric Model"
 )
 if not geom_type:
     script.exit()
 
-description = forms.ask_for_string(
-    prompt=(
+description = chat_prompt(
+    title="Parametric Model — {}".format(geom_type),
+    message=(
         "Describe the parametric geometry.\n\n"
-        "Examples for '{}':\n"
+        "Examples:\n"
         "  Parametric facade: 10 panels wide, 8 panels tall, sine wave pattern, amplitude 0.5m, period 3 panels\n"
         "  Twisted tower: rectangular 12x8m plan, 10 storeys, 3-degree rotation per floor\n"
         "  Sine wall: 15m long, amplitude 1.2m, wavelength 3m, wall height 3m on Level 0\n"
-        "  Column grid: 5x4 grid, 6m spacing in X, 8m spacing in Y, starting at origin\n\n"
-        "Model levels: {}"
-    ).format(geom_type, ", ".join(l["name"] for l in level_info)),
-    title="Parametric Model — {}".format(geom_type),
-    default=""
+        "  Column grid: 5x4 grid, 6m spacing in X, 8m spacing in Y, starting at origin"
+    ),
+    context="Type: {}  |  Levels: {}".format(geom_type, ", ".join(l["name"] for l in level_info))
 )
 if not description:
     script.exit()

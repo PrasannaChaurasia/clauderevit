@@ -10,6 +10,7 @@ from pyrevit import revit, DB, forms, script
 from Autodesk.Revit.DB import (FilteredElementCollector, ViewSheet,
                                 BuiltInCategory, ElementId)
 from claude_client import ask_claude, strip_fences, exec_claude_code, revit_exec_context
+from wpf_helper import chat_prompt
 
 doc   = revit.doc
 uidoc = revit.uidoc
@@ -38,18 +39,17 @@ for t in tbs:
         tb_options[name] = t.Id
 tb_names = list(tb_options.keys())
 
-instruction = forms.ask_for_string(
-    prompt=(
+instruction = chat_prompt(
+    title="Create Sheets",
+    message=(
         "Describe the sheets to create.\n\n"
         "Examples:\n"
         "  Create sheets A001 Location Plan, A100 Ground Floor Plan, A101 First Floor Plan\n"
         "  Structural sheets S001-S010 all named Structural General Arrangement\n"
         "  Duplicate A100 as A101, A102, A103 with same name\n"
-        "  Create 20 sheets A100 to A120 named Floor Plan - Level [n]\n\n"
-        "Existing: {ex}"
-    ).format(ex=", ".join(s["number"] for s in existing[:10]) or "None"),
-    title="Create Sheets",
-    default=""
+        "  Create 20 sheets A100 to A120 named Floor Plan - Level [n]"
+    ),
+    context="Existing sheets: {}".format(", ".join(s["number"] for s in existing[:10]) or "None")
 )
 
 if not instruction:

@@ -23,7 +23,7 @@ from System import Type, Activator
 from System.Reflection import Assembly
 
 from wpf_helper import (base_window, title_bar, add_row, add_col, place,
-                         label, button, pill,
+                         label, button, pill, chat_prompt,
                          GOLD, BG_MID, BG_CARD, BG_INP, BG_DARK,
                          FG_PRI, FG_SEC, FG_DIM, BORDER, rgb)
 
@@ -231,10 +231,10 @@ if not code_text or not code_text.strip():
     script.exit()
 
 if user_action == "generate":
-    description = forms.ask_for_string(
-        prompt="Describe what you want the C# script to do in Revit:",
-        title="Ask Claude — C# Generation",
-        default=""
+    description = chat_prompt(
+        title="Ask Claude — Generate C# Script",
+        message="Describe what you want the C# script to do in Revit.",
+        context=model_ctx
     )
     if not description:
         script.exit()

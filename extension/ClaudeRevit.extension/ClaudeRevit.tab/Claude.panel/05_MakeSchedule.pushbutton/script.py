@@ -9,13 +9,15 @@ sys.path.insert(0, _lib)
 from pyrevit import revit, DB, forms, script
 from Autodesk.Revit.DB import FilteredElementCollector, ViewSchedule
 from claude_client import ask_claude, strip_fences, exec_claude_code, revit_exec_context
+from wpf_helper import chat_prompt
 
 doc   = revit.doc
 uidoc = revit.uidoc
 output = script.get_output()
 
-instruction = forms.ask_for_string(
-    prompt=(
+instruction = chat_prompt(
+    title="Make Schedule",
+    message=(
         "Describe the schedule to create.\n\n"
         "Examples:\n"
         "  Wall schedule: Type Name, Length, Area, Volume\n"
@@ -23,10 +25,8 @@ instruction = forms.ask_for_string(
         "  Door schedule: Mark, Width, Height, Level\n"
         "  Window schedule: Type, Width, Height grouped by type\n"
         "  Sheet list: Number, Name, Revision Date\n"
-        "  Floor schedule: Type, Area, Volume\n"
-    ),
-    title="Make Schedule",
-    default=""
+        "  Floor schedule: Type, Area, Volume"
+    )
 )
 
 if not instruction:
