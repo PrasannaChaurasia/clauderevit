@@ -5,3 +5,6 @@ mcp-server/node_modules/
 
 # API key lives here — never commit the real config
 extension/ClaudeRevit.extension/config.json
+
+# MCP config contains API keys — use config.example.json as reference
+.mcp.json
